@@ -501,6 +501,186 @@ final class NetworkService: ObservableObject {
                                 )
                             )
                         }
-
                     } else if self.shouldCancelReceive {
                         self.cleanupReceive()
+                    }
+
+                    connection.cancel()
+                    return
+                }
+
+                if let error = error {
+                    logger.error("Receive data error: \(error)")
+                    self.onReceiveError?(error.localizedDescription)
+
+                    connection.cancel()
+                    self.cleanupReceive()
+                    return
+                }
+
+                self.receiveFileData(connection)
+            }
+        }
+    }
+
+    private func cleanupReceive() {
+        activeReceiveHandle?.closeFile()
+        activeReceiveHandle = nil
+
+        if let url = activeReceiveFile, shouldCancelReceive {
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        activeReceiveFile = nil
+        expectedReceiveSize = 0
+        receivedBytes = 0
+        shouldCancelReceive = false
+    }
+
+    // MARK: - TCP Sending (File Transfer Client)
+
+    private func performSend(
+        items: [OutgoingItem],
+        targetIP: String
+    ) async {
+        for (index, item) in items.enumerated() {
+            if activeSendCancellation {
+                break
+            }
+
+            await sendSingleFile(
+                item,
+                index: index + 1,
+                total: items.count,
+                targetIP: targetIP
+            )
+        }
+
+        if !activeSendCancellation {
+            self.onSendComplete?()
+        }
+    }
+
+    private func sendSingleFile(
+        _ item: OutgoingItem,
+        index: Int,
+        total: Int,
+        targetIP: String
+    ) async {
+        await withCheckedContinuation { continuation in
+            let connection = NWConnection(
+                host: NWEndpoint.Host(targetIP),
+                port: NWEndpoint.Port(rawValue: NetworkConstants.transferPort)!,
+                using: .tcp
+            )
+
+            connection.stateUpdateHandler = { [weak self] state in
+                switch state {
+                case .ready:
+                    Task { @MainActor in
+                        guard let self = self else {
+                            continuation.resume()
+                            return
+                        }
+                        self.sendFileData(
+                            connection,
+                            item: item,
+                            index: index,
+                            total: total,
+                            continuation: continuation
+                        )
+                    }
+
+                case .failed(let error):
+                    logger.error("Send connection failed: \(error)")
+                    Task { @MainActor in
+                        self?.onSendError?(
+                            "Ошибка подключения: \(error.localizedDescription)"
+                        )
+                    }
+                    continuation.resume()
+
+                case .cancelled:
+                    continuation.resume()
+
+                default:
+                    break
+                }
+            }
+
+            connection.start(queue: self.queue)
+        }
+    }
+
+    private func sendFileData(
+        _ connection: NWConnection,
+        item: OutgoingItem,
+        index: Int,
+        total: Int,
+        continuation: CheckedContinuation<Void, Never>
+    ) {
+        let fileNameData = item.fileName.data(using: .utf8)!
+        let fileNameLength = UInt32(fileNameData.count).littleEndian
+        let fileSize = UInt64(item.sizeBytes).littleEndian
+
+        var header = Data()
+
+        header.append(
+            withUnsafeBytes(of: fileNameLength) {
+                Data($0)
+            }
+        )
+
+        header.append(
+            withUnsafeBytes(of: fileSize) {
+                Data($0)
+            }
+        )
+
+        header.append(fileNameData)
+
+        connection.send(
+            content: header,
+            completion: .contentProcessed { [weak self] error in
+                Task { @MainActor in
+                    if let error = error {
+                        logger.error("Header send error: \(error)")
+
+                        self?.onSendError?(
+                            "Ошибка отправки заголовка: \(error.localizedDescription)"
+                        )
+
+                        connection.cancel()
+                        continuation.resume()
+                        return
+                    }
+
+                    self?.streamFile(
+                        connection,
+                        url: item.url,
+                        item: item,
+                        continuation: continuation
+                    )
+                }
+            }
+        )
+    }
+
+    private func streamFile(
+        _ connection: NWConnection,
+        url: URL,
+        item: OutgoingItem,
+        continuation: CheckedContinuation<Void, Never>
+    ) {
+        var sentBytes: Int64 = 0
+        var lastProgressTime = Date()
+        var speeds: [Double] = []
+
+        func sendNextChunk() {
+            if self.activeSendCancellation {
+                connection.cancel()
+                continuation.resume()
+                return
+            }
+
+            let
