@@ -17,6 +17,16 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Sanitize and validate project.pbxproj
+        run: |
+          python3 -c '
+          p = "FastDrop.xcodeproj/project.pbxproj"
+          raw = open(p, "rb").read()
+          text = raw.decode("utf-8-sig").lstrip()
+          open(p, "w", encoding="utf-8", newline="\n").write(text)
+          '
+          plutil -lint FastDrop.xcodeproj/project.pbxproj
+
       - name: Build for iOS (no codesign)
         run: |
           xcodebuild \
