@@ -1,0 +1,75 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+      
+      - name: Show Xcode version
+        run: xcodebuild -version
+      
+      - name: Build for iOS (no codesign)
+        run: |
+          cd FastDrop
+          xcodebuild \
+            -project FastDrop.xcodeproj \
+            -scheme FastDrop \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/FastDrop.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build
+      
+      - name: Create unsigned IPA
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -r build/Release-iphoneos/FastDrop.app build/ipa/Payload/
+          cd build/ipa && zip -r ../FastDrop-unsigned.ipa Payload
+      
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FastDrop-unsigned-ipa
+          path: FastDrop/build/FastDrop-unsigned.ipa
+      
+      # For signed builds, uncomment and add secrets:
+      # - name: Import certificates
+      #   run: |
+      #     echo "$CERT_P12" | base64 -d > cert.p12
+      #     security create-keychain -p "" build.keychain
+      #     security import cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+      #     security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+      #   env:
+      #     CERT_P12: ${{ secrets.IOS_CERT_P12 }}
+      #     CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+      
+      # - name: Build signed IPA
+      #   run: |
+      #     cd FastDrop
+      #     xcodebuild \
+      #       -project FastDrop.xcodeproj \
+      #       -scheme FastDrop \
+      #       -configuration Release \
+      #       -destination "generic/platform=iOS" \
+      #       -archivePath build/FastDrop.xcarchive \
+      #       OTHER_CODE_SIGN_FLAGS="--keychain build.keychain" \
+      #       clean archive
+      #     
+      #     xcodebuild -exportArchive \
+      #       -archivePath build/FastDrop.xcarchive \
+      #       -exportPath build/export \
+      #       -exportOptionsPlist ExportOptions.plist
