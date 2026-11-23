@@ -17,7 +17,6 @@
 		B8A9F1A72A1B2C3D /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A72A1B2C3E /* SettingsService.swift */; };
 		B8A9F1A82A1B2C3D /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A82A1B2C3E /* NetworkService.swift */; };
 		B8A9F1A92A1B2C3D /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A92A1B2C3E /* HomeViewModel.swift */; };
-		B8A9F1AA2A1B2C3D /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B8A9F1AA2A1B2C3E /* Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -184,7 +183,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B8A9F1AA2A1B2C3D /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,7 +339,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = -O;
 				SWIFT_VERSION = 5.0;
 			};
-			name = Release;
+			name = Release.
 		};
 		B8A9F1BC2A1B2C3D /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -365,7 +363,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Debug;
+			name = Debug.
 		};
 		B8A9F1BD2A1B2C3D /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -389,7 +387,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Release;
+			name = Release.
 		};
 /* End XCBuildConfiguration section */
 
