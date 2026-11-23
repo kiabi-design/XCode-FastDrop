@@ -15,8 +15,13 @@ final class NetworkService: ObservableObject {
     @Published var isListening: Bool = false
     @Published var listenError: String?
     @Published var receiveEnabled: Bool = true {
-        didSet { if receiveEnabled { startReceiving() } else { stopReceiving() } }
+        didSet {
+    if receiveEnabled {
+        Task { await startReceiving() }
+    } else {
+        stopReceiving()
     }
+}
     
     // Callbacks
     var onReceiveStart: ((String, Int64) -> Void)?
