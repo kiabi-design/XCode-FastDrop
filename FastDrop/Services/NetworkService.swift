@@ -148,8 +148,10 @@ final class NetworkService: ObservableObject {
 
         udpConnection?.stateUpdateHandler = { [weak self] state in
             if case .ready = state {
-                self?.startBeacon()
-                self?.startReceivingBeacons()
+                Task { @MainActor in
+                    self?.startBeacon()
+                    self?.startReceivingBeacons()
+                }
             }
         }
 
@@ -163,7 +165,9 @@ final class NetworkService: ObservableObject {
             withTimeInterval: 2.0,
             repeats: true
         ) { [weak self] _ in
-            self?.sendBeacon()
+            Task { @MainActor in
+                self?.sendBeacon()
+            }
         }
 
         beaconTimer?.fire()
@@ -195,15 +199,16 @@ final class NetworkService: ObservableObject {
     private func startReceivingBeacons() {
         udpConnection?.receive(
             minimumIncompleteLength: 1,
-            maximumIncompleteLength: 65536
-        ) { [weak self] data, _, isComplete, error in
+            maximumLength: 65536
+        ) { [weak self] data, _, isComplete, _ in
+            Task { @MainActor in
+                if let data = data, !data.isEmpty {
+                    self?.processBeacon(data)
+                }
 
-            if let data = data, !data.isEmpty {
-                self?.processBeacon(data)
-            }
-
-            if !isComplete {
-                self?.startReceivingBeacons()
+                if !isComplete {
+                    self?.startReceivingBeacons()
+                }
             }
         }
     }
@@ -211,30 +216,17 @@ final class NetworkService: ObservableObject {
     private func processBeacon(_ data: Data) {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-            let name = json["name"],
-            let os = json["os"]
+            let _ = json["name"],
+            let _ = json["os"]
         else {
             return
         }
 
-        // Get sender IP from connection metadata would be better,
-        // but for broadcast we parse.
-        // In practice, we'll get the IP from the NWConnection's remote endpoint.
-        // For now, we'll need to track this differently.
-
         peerQueue.async { [weak self] in
-            guard let self = self else {
+            guard self != nil else {
                 return
             }
-
-            // Since we're receiving broadcast, we don't easily get sender IP.
-            // We'll use a different approach: listen on a specific port for unicast responses.
         }
-    }
-
-    // Better approach: Use TCP for peer info exchange
-    private func startPeerDiscoveryListener() {
-        // We'll use the TCP listener port for peer info too
     }
 
     // MARK: - TCP Receiving (File Transfer Server)
@@ -255,7 +247,9 @@ final class NetworkService: ObservableObject {
             )
 
             tcpListener?.newConnectionHandler = { [weak self] connection in
-                self?.handleIncomingConnection(connection)
+                Task { @MainActor in
+                    self?.handleIncomingConnection(connection)
+                }
             }
 
             tcpListener?.stateUpdateHandler = { [weak self] state in
@@ -285,7 +279,9 @@ final class NetworkService: ObservableObject {
                 withTimeInterval: 10,
                 repeats: true
             ) { [weak self] _ in
-                self?.cleanupStalePeers()
+                Task { @MainActor in
+                    self?.cleanupStalePeers()
+                }
             }
 
         } catch {
@@ -317,40 +313,41 @@ final class NetworkService: ObservableObject {
     private func receiveHeader(_ connection: NWConnection) {
         connection.receive(
             minimumIncompleteLength: 8,
-            maximumIncompleteLength: 8
+            maximumLength: 8
         ) { [weak self] data, _, isComplete, error in
+            Task { @MainActor in
+                guard
+                    let self = self,
+                    let data = data,
+                    data.count == 8,
+                    !isComplete
+                else {
+                    if let error = error {
+                        logger.error("Header receive error: \(error)")
+                    }
 
-            guard
-                let self = self,
-                let data = data,
-                data.count == 8,
-                !isComplete
-            else {
-                if let error = error {
-                    logger.error("Header receive error: \(error)")
+                    connection.cancel()
+                    return
                 }
 
-                connection.cancel()
-                return
+                let fileNameLength = Int(
+                    data.withUnsafeBytes {
+                        $0.load(as: UInt32.self)
+                    }.littleEndian
+                )
+
+                let fileSize = Int64(
+                    data.advanced(by: 4).withUnsafeBytes {
+                        $0.load(as: UInt64.self)
+                    }.littleEndian
+                )
+
+                self.receiveFileName(
+                    connection,
+                    length: fileNameLength,
+                    fileSize: fileSize
+                )
             }
-
-            let fileNameLength = Int(
-                data.withUnsafeBytes {
-                    $0.load(as: UInt32.self)
-                }.littleEndian
-            )
-
-            let fileSize = Int64(
-                data.advanced(by: 4).withUnsafeBytes {
-                    $0.load(as: UInt64.self)
-                }.littleEndian
-            )
-
-            self.receiveFileName(
-                connection,
-                length: fileNameLength,
-                fileSize: fileSize
-            )
         }
     }
 
@@ -361,29 +358,30 @@ final class NetworkService: ObservableObject {
     ) {
         connection.receive(
             minimumIncompleteLength: length,
-            maximumIncompleteLength: length
+            maximumLength: length
         ) { [weak self] data, _, isComplete, error in
+            Task { @MainActor in
+                guard
+                    let self = self,
+                    let data = data,
+                    data.count == length,
+                    !isComplete,
+                    let fileName = String(data: data, encoding: .utf8)
+                else {
+                    if let error = error {
+                        logger.error("Filename receive error: \(error)")
+                    }
 
-            guard
-                let self = self,
-                let data = data,
-                data.count == length,
-                !isComplete,
-                let fileName = String(data: data, encoding: .utf8)
-            else {
-                if let error = error {
-                    logger.error("Filename receive error: \(error)")
+                    connection.cancel()
+                    return
                 }
 
-                connection.cancel()
-                return
+                self.startFileReceive(
+                    connection,
+                    fileName: fileName,
+                    fileSize: fileSize
+                )
             }
-
-            self.startFileReceive(
-                connection,
-                fileName: fileName,
-                fileSize: fileSize
-            )
         }
     }
 
@@ -417,8 +415,6 @@ final class NetworkService: ObservableObject {
         self.activeReceiveFile = finalURL
         self.expectedReceiveSize = fileSize
         self.receivedBytes = 0
-
-        // FIX: renamed property to avoid conflict with cancelReceive()
         self.shouldCancelReceive = false
 
         // Create file
@@ -442,64 +438,57 @@ final class NetworkService: ObservableObject {
             return
         }
 
-        Task { @MainActor in
-            self.onReceiveStart?(fileName, fileSize)
-        }
-
+        self.onReceiveStart?(fileName, fileSize)
         receiveFileData(connection)
     }
 
     private func receiveFileData(_ connection: NWConnection) {
         connection.receive(
             minimumIncompleteLength: 1,
-            maximumIncompleteLength: NetworkConstants.chunkSize
+            maximumLength: NetworkConstants.chunkSize
         ) { [weak self] data, _, isComplete, error in
-
-            guard let self = self else {
-                return
-            }
-
-            if let data = data, !data.isEmpty {
-                if self.shouldCancelReceive {
-                    connection.cancel()
-                    self.cleanupReceive()
+            Task { @MainActor in
+                guard let self = self else {
                     return
                 }
 
-                do {
-                    try self.activeReceiveHandle?.write(contentsOf: data)
-                    self.receivedBytes += Int64(data.count)
+                if let data = data, !data.isEmpty {
+                    if self.shouldCancelReceive {
+                        connection.cancel()
+                        self.cleanupReceive()
+                        return
+                    }
 
-                    Task { @MainActor in
+                    do {
+                        try self.activeReceiveHandle?.write(contentsOf: data)
+                        self.receivedBytes += Int64(data.count)
+
                         self.onReceiveProgress?(
                             self.receivedBytes,
                             self.expectedReceiveSize
                         )
+                    } catch {
+                        logger.error("Write error: \(error)")
+
+                        self.onReceiveError?(
+                            "Ошибка записи: \(error.localizedDescription)"
+                        )
+
+                        connection.cancel()
+                        self.cleanupReceive()
+                        return
                     }
-
-                } catch {
-                    logger.error("Write error: \(error)")
-
-                    self.onReceiveError?(
-                        "Ошибка записи: \(error.localizedDescription)"
-                    )
-
-                    connection.cancel()
-                    self.cleanupReceive()
-                    return
                 }
-            }
 
-            if isComplete ||
-                self.receivedBytes >= self.expectedReceiveSize ||
-                self.shouldCancelReceive {
+                if isComplete ||
+                    self.receivedBytes >= self.expectedReceiveSize ||
+                    self.shouldCancelReceive {
 
-                if !self.shouldCancelReceive &&
-                    self.receivedBytes >= self.expectedReceiveSize {
+                    if !self.shouldCancelReceive &&
+                        self.receivedBytes >= self.expectedReceiveSize {
 
-                    self.activeReceiveHandle?.closeFile()
+                        self.activeReceiveHandle?.closeFile()
 
-                    Task { @MainActor in
                         if let url = self.activeReceiveFile {
                             self.onReceiveComplete?(url)
 
@@ -512,316 +501,6 @@ final class NetworkService: ObservableObject {
                                 )
                             )
                         }
-                    }
 
-                } else if self.shouldCancelReceive {
-                    self.cleanupReceive()
-                }
-
-                connection.cancel()
-                return
-            }
-
-            if let error = error {
-                logger.error("Receive data error: \(error)")
-                self.onReceiveError?(error.localizedDescription)
-
-                connection.cancel()
-                self.cleanupReceive()
-                return
-            }
-
-            self.receiveFileData(connection)
-        }
-    }
-
-    private func cleanupReceive() {
-        activeReceiveHandle?.closeFile()
-        activeReceiveHandle = nil
-
-        if let url = activeReceiveFile, shouldCancelReceive {
-            try? FileManager.default.removeItem(at: url)
-        }
-
-        activeReceiveFile = nil
-        expectedReceiveSize = 0
-        receivedBytes = 0
-
-        // FIX: reset renamed cancellation flag
-        shouldCancelReceive = false
-    }
-
-    // MARK: - TCP Sending (File Transfer Client)
-
-    private func performSend(
-        items: [OutgoingItem],
-        targetIP: String
-    ) async {
-        for (index, item) in items.enumerated() {
-            if activeSendCancellation {
-                break
-            }
-
-            await sendSingleFile(
-                item,
-                index: index + 1,
-                total: items.count,
-                targetIP: targetIP
-            )
-        }
-
-        if !activeSendCancellation {
-            await MainActor.run {
-                self.onSendComplete?()
-            }
-        }
-    }
-
-    private func sendSingleFile(
-        _ item: OutgoingItem,
-        index: Int,
-        total: Int,
-        targetIP: String
-    ) async {
-        await withCheckedContinuation { continuation in
-            let connection = NWConnection(
-                host: NWEndpoint.Host(targetIP),
-                port: NWEndpoint.Port(rawValue: NetworkConstants.transferPort)!,
-                using: .tcp
-            )
-
-            connection.stateUpdateHandler = { state in
-                switch state {
-                case .ready:
-                    self.sendFileData(
-                        connection,
-                        item: item,
-                        index: index,
-                        total: total,
-                        continuation: continuation
-                    )
-
-                case .failed(let error):
-                    logger.error("Send connection failed: \(error)")
-
-                    self.onSendError?(
-                        "Ошибка подключения: \(error.localizedDescription)"
-                    )
-
-                    continuation.resume()
-
-                case .cancelled:
-                    continuation.resume()
-
-                default:
-                    break
-                }
-            }
-
-            connection.start(queue: self.queue)
-        }
-    }
-
-    private func sendFileData(
-        _ connection: NWConnection,
-        item: OutgoingItem,
-        index: Int,
-        total: Int,
-        continuation: CheckedContinuation<Void, Never>
-    ) {
-        let fileNameData = item.fileName.data(using: .utf8)!
-        let fileNameLength = UInt32(fileNameData.count).littleEndian
-        let fileSize = UInt64(item.sizeBytes).littleEndian
-
-        var header = Data()
-
-        header.append(
-            withUnsafeBytes(of: fileNameLength) {
-                Data($0)
-            }
-        )
-
-        header.append(
-            withUnsafeBytes(of: fileSize) {
-                Data($0)
-            }
-        )
-
-        header.append(fileNameData)
-
-        connection.send(
-            content: header,
-            completion: .contentProcessed { error in
-
-                if let error = error {
-                    logger.error("Header send error: \(error)")
-
-                    self.onSendError?(
-                        "Ошибка отправки заголовка: \(error.localizedDescription)"
-                    )
-
-                    connection.cancel()
-                    continuation.resume()
-                    return
-                }
-
-                self.streamFile(
-                    connection,
-                    url: item.url,
-                    item: item,
-                    continuation: continuation
-                )
-            }
-        )
-    }
-
-    private func streamFile(
-        _ connection: NWConnection,
-        url: URL,
-        item: OutgoingItem,
-        continuation: CheckedContinuation<Void, Never>
-    ) {
-        var sentBytes: Int64 = 0
-        let startTime = Date()
-        var lastProgressTime = Date()
-        var lastProgressBytes: Int64 = 0
-        var speeds: [Double] = []
-
-        func sendNextChunk() {
-            if self.activeSendCancellation {
-                connection.cancel()
-                continuation.resume()
-                return
-            }
-
-            let offset = sentBytes
-            let length = min(
-                NetworkConstants.chunkSize,
-                Int(item.sizeBytes - sentBytes)
-            )
-
-            guard length > 0 else {
-                // File complete
-                let avgSpeed = speeds.isEmpty
-                    ? 0.0
-                    : speeds.reduce(0, +) / Double(speeds.count)
-
-                let maxSpeed = speeds.max() ?? 0
-                let minSpeed = speeds.min() ?? 0
-
-                Task { @MainActor in
-                    self.onSendProgress?(
-                        item.sizeBytes,
-                        item.sizeBytes
-                    )
-
-                    SettingsService.shared.addHistoryItem(
-                        TransferHistoryItem(
-                            fileName: item.fileName,
-                            sizeBytes: item.sizeBytes,
-                            direction: .sent,
-                            savedPath: url.path
-                        )
-                    )
-                }
-
-                connection.cancel()
-                continuation.resume()
-                return
-            }
-
-            do {
-                let fileHandle = try FileHandle(
-                    forReadingFrom: url
-                )
-
-                try fileHandle.seek(toOffset: UInt64(offset))
-
-                let data = fileHandle.readData(ofLength: length)
-
-                try fileHandle.close()
-
-                connection.send(
-                    content: data,
-                    completion: .contentProcessed { error in
-
-                        if let error = error {
-                            logger.error("Chunk send error: \(error)")
-
-                            self.onSendError?(
-                                "Ошибка отправки: \(error.localizedDescription)"
-                            )
-
-                            connection.cancel()
-                            continuation.resume()
-                            return
-                        }
-
-                        sentBytes += Int64(data.count)
-
-                        // Calculate speed
-                        let now = Date()
-                        let elapsed = now.timeIntervalSince(lastProgressTime)
-
-                        if elapsed >= 0.15 {
-                            let chunkSpeed = Double(data.count) /
-                                (1024 * 1024) / elapsed
-
-                            speeds.append(chunkSpeed)
-                            lastProgressTime = now
-                            lastProgressBytes = sentBytes
-                        }
-
-                        Task { @MainActor in
-                            self.onSendProgress?(
-                                sentBytes,
-                                item.sizeBytes
-                            )
-                        }
-
-                        sendNextChunk()
-                    }
-                )
-
-            } catch {
-                logger.error("File read error: \(error)")
-
-                self.onSendError?(
-                    "Ошибка чтения файла: \(error.localizedDescription)"
-                )
-
-                connection.cancel()
-                continuation.resume()
-            }
-        }
-
-        sendNextChunk()
-    }
-
-    // MARK: - Cleanup
-
-    private func cleanupStalePeers() {
-        let cutoff = Date().addingTimeInterval(-15)
-
-        peerQueue.async { [weak self] in
-            guard let self = self else {
-                return
-            }
-
-            // Peer cleanup would happen here if we tracked peers properly
-        }
-    }
-
-    private func stopAll() {
-        beaconTimer?.invalidate()
-        beaconTimer = nil
-
-        cleanupTimer?.invalidate()
-        cleanupTimer = nil
-
-        udpConnection?.cancel()
-        udpConnection = nil
-
-        stopReceiving()
-    }
-}
+                    } else if self.shouldCancelReceive {
+                        self.cleanupReceive()
