@@ -21,6 +21,7 @@ final class NetworkService: ObservableObject {
     } else {
         stopReceiving()
     }
+  }
 }
     
     // Callbacks
