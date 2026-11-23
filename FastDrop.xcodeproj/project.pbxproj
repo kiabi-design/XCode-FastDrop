@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B8A9F1A02A1B2C3D /* FastDropApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A02A1B2C3E /* FastDropApp.swift */; };
-		B8A9F1A12A1B2C3D /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A12A1B2C3E /* HomeView.swift */; };
-		B8A9F1A22A1B2C3D /* TransferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A22A1B2C3E /* TransferView.swift */; };
-		B8A9F1A32A1B2C3D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A32A1B2C3F /* SettingsView.swift */; };
-		B8A9F1A42A1B2C3D /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A42A1B2C3E /* HistoryView.swift */; };
-		B8A9F1A52A1B2C3D /* GlassComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A52A1B2C3E /* GlassComponents.swift */; };
-		B8A9F1A62A1B2C3D /* TransferModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A62A1B2C3E /* TransferModels.swift */; };
-		B8A9F1A72A1B2C3D /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A72A1B2C3E /* SettingsService.swift */; };
-		B8A9F1A82A1B2C3D /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A82A1B2C3E /* NetworkService.swift */; };
-		B8A9F1A92A1B2C3D /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A92A1B2C3E /* HomeViewModel.swift */; };
+		B8A9F1A02A1B2C31 /* FastDropApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A02A1B2C3E /* FastDropApp.swift */; };
+		B8A9F1A12A1B2C31 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A12A1B2C3E /* HomeView.swift */; };
+		B8A9F1A22A1B2C31 /* TransferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A22A1B2C3E /* TransferView.swift */; };
+		B8A9F1A32A1B2C31 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A32A1B2C3F /* SettingsView.swift */; };
+		B8A9F1A42A1B2C31 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A42A1B2C3E /* HistoryView.swift */; };
+		B8A9F1A52A1B2C31 /* GlassComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A52A1B2C3E /* GlassComponents.swift */; };
+		B8A9F1A62A1B2C31 /* TransferModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A62A1B2C3E /* TransferModels.swift */; };
+		B8A9F1A72A1B2C31 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A72A1B2C3E /* SettingsService.swift */; };
+		B8A9F1A82A1B2C31 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A82A1B2C3E /* NetworkService.swift */; };
+		B8A9F1A92A1B2C31 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9F1A92A1B2C3E /* HomeViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -193,16 +193,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B8A9F1A02A1B2C3D /* FastDropApp.swift in Sources */,
-				B8A9F1A12A1B2C3D /* HomeView.swift in Sources */,
-				B8A9F1A22A1B2C3D /* TransferView.swift in Sources */,
-				B8A9F1A32A1B2C3D /* SettingsView.swift in Sources */,
-				B8A9F1A42A1B2C3D /* HistoryView.swift in Sources */,
-				B8A9F1A52A1B2C3D /* GlassComponents.swift in Sources */,
-				B8A9F1A62A1B2C3D /* TransferModels.swift in Sources */,
-				B8A9F1A72A1B2C3D /* SettingsService.swift in Sources */,
-				B8A9F1A82A1B2C3D /* NetworkService.swift in Sources */,
-				B8A9F1A92A1B2C3D /* HomeViewModel.swift in Sources */,
+				B8A9F1A02A1B2C31 /* FastDropApp.swift in Sources */,
+				B8A9F1A12A1B2C31 /* HomeView.swift in Sources */,
+				B8A9F1A22A1B2C31 /* TransferView.swift in Sources */,
+				B8A9F1A32A1B2C31 /* SettingsView.swift in Sources */,
+				B8A9F1A42A1B2C31 /* HistoryView.swift in Sources */,
+				B8A9F1A52A1B2C31 /* GlassComponents.swift in Sources */,
+				B8A9F1A62A1B2C31 /* TransferModels.swift in Sources */,
+				B8A9F1A72A1B2C31 /* SettingsService.swift in Sources */,
+				B8A9F1A82A1B2C31 /* NetworkService.swift in Sources */,
+				B8A9F1A92A1B2C31 /* HomeViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,7 +339,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = -O;
 				SWIFT_VERSION = 5.0;
 			};
-			name = Release.
+			name = Release;
 		};
 		B8A9F1BC2A1B2C3D /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -363,7 +363,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Debug.
+			name = Debug;
 		};
 		B8A9F1BD2A1B2C3D /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -387,7 +387,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Release.
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
@@ -401,17 +401,4 @@
 			defaultConfigurationName = Release;
 			defaultConfigurationIsVisible = 0;
 		};
-		B8A9F1C22A1B2C3D /* Build configuration list for PBXProject "FastDrop" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				B8A9F1B82A1B2C3D /* Debug */,
-				B8A9F1B92A1B2C3D /* Release */,
-			);
-			defaultConfigurationName = Release;
-			defaultConfigurationIsVisible = 0;
-		};
-/* End XCConfigurationList section */
-
-	};
-	rootObject = B8A9F1C02A1B2C3D /* Project object */;
-}
+		B8A9
