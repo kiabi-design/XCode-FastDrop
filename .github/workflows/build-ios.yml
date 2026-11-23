@@ -17,15 +17,260 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Sanitize project.pbxproj
+      - name: Generate clean project.pbxproj
         run: |
-          python3 -c '
-          p = "FastDrop.xcodeproj/project.pbxproj"
-          raw = open(p, "rb").read()
-          text = raw.decode("utf-8-sig").lstrip()
-          open(p, "w", encoding="utf-8", newline="\n").write(text)
-          '
-          head -n 5 FastDrop.xcodeproj/project.pbxproj
+          python3 - << 'EOF'
+          import os, hashlib
+
+          def uid(name: str) -> str:
+              return hashlib.md5(name.encode("utf-8")).hexdigest()[:24].upper()
+
+          src_root = "FastDrop"
+          swift_files = []
+          for root, _, files in os.walk(src_root):
+              for f in sorted(files):
+                  if f.endswith(".swift"):
+                      rel = os.path.relpath(os.path.join(root, f), src_root)
+                      swift_files.append(rel)
+
+          build_files = []
+          file_refs = []
+          source_build_ids = []
+          group_children = []
+
+          for rel in swift_files:
+              base = os.path.basename(rel)
+              fref_id = uid("fref:" + rel)
+              bfile_id = uid("bfile:" + rel)
+              source_build_ids.append(f"\t\t\t\t{bfile_id} /* {base} in Sources */,")
+              group_children.append(f"\t\t\t\t{fref_id} /* {base} */,")
+              build_files.append(f"\t\t{bfile_id} /* {base} in Sources */ = {{isa = PBXBuildFile; fileRef = {fref_id} /* {base} */; }};")
+              file_refs.append(f"\t\t{fref_id} /* {base} */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {rel}; sourceTree = \"<group>\"; }};")
+
+          plist_fref = uid("fref:Info.plist")
+          file_refs.append(f"\t\t{plist_fref} /* Info.plist */ = {{isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = \"<group>\"; }};")
+          group_children.append(f"\t\t{plist_fref} /* Info.plist */,")
+
+          prod_ref = uid("product:FastDrop.app")
+          file_refs.append(f"\t\t{prod_ref} /* FastDrop.app */ = {{isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastDrop.app; sourceTree = BUILT_PRODUCTS_DIR; }};")
+
+          fw_phase = uid("phase:Frameworks")
+          res_phase = uid("phase:Resources")
+          src_phase = uid("phase:Sources")
+          main_group = uid("group:Main")
+          src_group = uid("group:FastDrop")
+          prod_group = uid("group:Products")
+          target_id = uid("target:FastDrop")
+          proj_id = uid("project:FastDrop")
+          tgt_cfg_dbg = uid("cfg:tgt:Debug")
+          tgt_cfg_rel = uid("cfg:tgt:Release")
+          prj_cfg_dbg = uid("cfg:prj:Debug")
+          prj_cfg_rel = uid("cfg:prj:Release")
+          tgt_cfg_list = uid("cfglist:tgt")
+          prj_cfg_list = uid("cfglist:prj")
+
+          pbxproj = f"""// !$*UTF8*$!
+          {{
+          \tarchiveVersion = 1;
+          \tclasses = {{
+          \t}};
+          \tobjectVersion = 56;
+          \tobjects = {{
+
+          /* Begin PBXBuildFile section */
+          {chr(10).join(build_files)}
+          /* End PBXBuildFile section */
+
+          /* Begin PBXFileReference section */
+          {chr(10).join(file_refs)}
+          /* End PBXFileReference section */
+
+          /* Begin PBXFrameworksBuildPhase section */
+          \t\t{fw_phase} /* Frameworks */ = {{
+          \t\t\tisa = PBXFrameworksBuildPhase;
+          \t\t\tbuildActionMask = 2147483647;
+          \t\t\tfiles = (
+          \t\t\t);
+          \t\t\trunOnlyForDeploymentPostprocessing = 0;
+          \t\t}};
+          /* End PBXFrameworksBuildPhase section */
+
+          /* Begin PBXGroup section */
+          \t\t{main_group} = {{
+          \t\t\tisa = PBXGroup;
+          \t\t\tchildren = (
+          \t\t\t\t{src_group} /* FastDrop */,
+          \t\t\t\t{prod_group} /* Products */,
+          \t\t\t);
+          \t\t\tsourceTree = "<group>";
+          \t\t}};
+          \t\t{src_group} /* FastDrop */ = {{
+          \t\t\tisa = PBXGroup;
+          \t\t\tchildren = (
+          {chr(10).join(group_children)}
+          \t\t\t);
+          \t\t\tpath = FastDrop;
+          \t\t\tsourceTree = "<group>";
+          \t\t}};
+          \t\t{prod_group} /* Products */ = {{
+          \t\t\tisa = PBXGroup;
+          \t\t\tchildren = (
+          \t\t\t\t{prod_ref} /* FastDrop.app */,
+          \t\t\t);
+          \t\t\tname = Products;
+          \t\t\tsourceTree = "<group>";
+          \t\t}};
+          /* End PBXGroup section */
+
+          /* Begin PBXNativeTarget section */
+          \t\t{target_id} /* FastDrop */ = {{
+          \t\t\tisa = PBXNativeTarget;
+          \t\t\tbuildConfigurationList = {tgt_cfg_list} /* Build configuration list for PBXNativeTarget "FastDrop" */;
+          \t\t\tbuildPhases = (
+          \t\t\t\t{src_phase} /* Sources */,
+          \t\t\t\t{fw_phase} /* Frameworks */,
+          \t\t\t\t{res_phase} /* Resources */,
+          \t\t\t);
+          \t\t\tbuildRules = (
+          \t\t\t);
+          \t\t\tdependencies = (
+          \t\t\t);
+          \t\t\tname = FastDrop;
+          \t\t\tproductName = FastDrop;
+          \t\t\tproductReference = {prod_ref} /* FastDrop.app */;
+          \t\t\tproductType = "com.apple.product-type.application";
+          \t\t}};
+          /* End PBXNativeTarget section */
+
+          /* Begin PBXProject section */
+          \t\t{proj_id} /* Project object */ = {{
+          \t\t\tisa = PBXProject;
+          \t\t\tattributes = {{
+          \t\t\t\tLastSwiftUpdateCheck = 1500;
+          \t\t\t\tLastUpgradeCheck = 1500;
+          \t\t\t}};
+          \t\t\tbuildConfigurationList = {prj_cfg_list} /* Build configuration list for PBXProject "FastDrop" */;
+          \t\t\tcompatibilityVersion = "Xcode 15.0";
+          \t\t\tdevelopmentRegion = en;
+          \t\t\tknownRegions = (
+          \t\t\t\ten,
+          \t\t\t\tru,
+          \t\t\t);
+          \t\t\tmainGroup = {main_group};
+          \t\t\tproductRefGroup = {prod_group} /* Products */;
+          \t\t\tprojectDirPath = "";
+          \t\t\tprojectRoot = "";
+          \t\t\ttargets = (
+          \t\t\t\t{target_id} /* FastDrop */,
+          \t\t\t);
+          \t\t}};
+          /* End PBXProject section */
+
+          /* Begin PBXResourcesBuildPhase section */
+          \t\t{res_phase} /* Resources */ = {{
+          \t\t\tisa = PBXResourcesBuildPhase;
+          \t\t\tbuildActionMask = 2147483647;
+          \t\t\tfiles = (
+          \t\t\t);
+          \t\t\trunOnlyForDeploymentPostprocessing = 0;
+          \t\t}};
+          /* End PBXResourcesBuildPhase section */
+
+          /* Begin PBXSourcesBuildPhase section */
+          \t\t{src_phase} /* Sources */ = {{
+          \t\t\tisa = PBXSourcesBuildPhase;
+          \t\t\tbuildActionMask = 2147483647;
+          \t\t\tfiles = (
+          {chr(10).join(source_build_ids)}
+          \t\t\t);
+          \t\t\trunOnlyForDeploymentPostprocessing = 0;
+          \t\t}};
+          /* End PBXSourcesBuildPhase section */
+
+          /* Begin XCBuildConfiguration section */
+          \t\t{prj_cfg_dbg} /* Debug */ = {{
+          \t\t\tisa = XCBuildConfiguration;
+          \t\t\tbuildSettings = {{
+          \t\t\t\tCLANG_ENABLE_MODULES = YES;
+          \t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 16.0;
+          \t\t\t\tSDKROOT = iphoneos;
+          \t\t\t\tSWIFT_VERSION = 5.0;
+          \t\t\t}};
+          \t\t\tname = Debug;
+          \t\t}};
+          \t\t{prj_cfg_rel} /* Release */ = {{
+          \t\t\tisa = XCBuildConfiguration;
+          \t\t\tbuildSettings = {{
+          \t\t\t\tCLANG_ENABLE_MODULES = YES;
+          \t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 16.0;
+          \t\t\t\tSDKROOT = iphoneos;
+          \t\t\t\tSWIFT_VERSION = 5.0;
+          \t\t\t}};
+          \t\t\tname = Release;
+          \t\t}};
+          \t\t{tgt_cfg_dbg} /* Debug */ = {{
+          \t\t\tisa = XCBuildConfiguration;
+          \t\t\tbuildSettings = {{
+          \t\t\t\tCODE_SIGN_STYLE = Automatic;
+          \t\t\t\tCURRENT_PROJECT_VERSION = 1;
+          \t\t\t\tGENERATE_INFOPLIST_FILE = NO;
+          \t\t\t\tINFOPLIST_FILE = FastDrop/Info.plist;
+          \t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 16.0;
+          \t\t\t\tMARKETING_VERSION = 1.2;
+          \t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.fastdrop;
+          \t\t\t\tPRODUCT_NAME = "$(TARGET_NAME)";
+          \t\t\t\tSWIFT_VERSION = 5.0;
+          \t\t\t\tTARGETED_DEVICE_FAMILY = "1,2";
+          \t\t\t}};
+          \t\t\tname = Debug;
+          \t\t}};
+          \t\t{tgt_cfg_rel} /* Release */ = {{
+          \t\t\tisa = XCBuildConfiguration;
+          \t\t\tbuildSettings = {{
+          \t\t\t\tCODE_SIGN_STYLE = Automatic;
+          \t\t\t\tCURRENT_PROJECT_VERSION = 1;
+          \t\t\t\tGENERATE_INFOPLIST_FILE = NO;
+          \t\t\t\tINFOPLIST_FILE = FastDrop/Info.plist;
+          \t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 16.0;
+          \t\t\t\tMARKETING_VERSION = 1.2;
+          \t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.fastdrop;
+          \t\t\t\tPRODUCT_NAME = "$(TARGET_NAME)";
+          \t\t\t\tSWIFT_VERSION = 5.0;
+          \t\t\t\tTARGETED_DEVICE_FAMILY = "1,2";
+          \t\t\t}};
+          \t\t\tname = Release;
+          \t\t}};
+          /* End XCBuildConfiguration section */
+
+          /* Begin XCConfigurationList section */
+          \t\t{tgt_cfg_list} /* Build configuration list for PBXNativeTarget "FastDrop" */ = {{
+          \t\t\tisa = XCConfigurationList;
+          \t\t\tbuildConfigurations = (
+          \t\t\t\t{tgt_cfg_dbg} /* Debug */,
+          \t\t\t\t{tgt_cfg_rel} /* Release */,
+          \t\t\t);
+          \t\t\tdefaultConfigurationName = Release;
+          \t\t}};
+          \t\t{prj_cfg_list} /* Build configuration list for PBXProject "FastDrop" */ = {{
+          \t\t\tisa = XCConfigurationList;
+          \t\t\tbuildConfigurations = (
+          \t\t\t\t{prj_cfg_dbg} /* Debug */,
+          \t\t\t\t{prj_cfg_rel} /* Release */,
+          \t\t\t);
+          \t\t\tdefaultConfigurationName = Release;
+          \t\t}};
+          /* End XCConfigurationList section */
+
+          \t}};
+          \trootObject = {proj_id} /* Project object */;
+          }}
+          """
+
+          os.makedirs("FastDrop.xcodeproj", exist_ok=True)
+          with open("FastDrop.xcodeproj/project.pbxproj", "w", encoding="utf-8", newline="\n") as f:
+              f.write(pbxproj)
+          print(f"Generated project.pbxproj with {len(swift_files)} Swift files")
+          EOF
 
       - name: Build for iOS (no codesign)
         run: |
