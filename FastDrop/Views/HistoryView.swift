@@ -1,21 +1,21 @@
 import SwiftUI
 
 struct HistoryView: View {
-    @Environment(\.dismiss) var dismiss
-    @StateObject var settings = SettingsService.shared
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: SettingsService
     @State private var selectedTab: TransferDirection = .sent
-    
+
     var body: some View {
         let isWhite = settings.isWhiteTheme
         let palette = GlassPalette(isWhite: isWhite)
-        
+
         let sentItems = settings.history.filter { $0.direction == .sent }
         let receivedItems = settings.history.filter { $0.direction == .received }
-        
+        let visibleItems = selectedTab == .sent ? sentItems : receivedItems
+
         LiquidBackground(isWhite: isWhite) {
             NavigationStack {
                 VStack(spacing: 0) {
-                    // Tab selector
                     HStack(spacing: 10) {
                         TabButton(
                             title: "Отправлено (\(sentItems.count))",
@@ -24,7 +24,7 @@ struct HistoryView: View {
                             isWhite: isWhite,
                             palette: palette
                         ) { selectedTab = .sent }
-                        
+
                         TabButton(
                             title: "Принято (\(receivedItems.count))",
                             icon: "arrow.down.circle.fill",
@@ -36,9 +36,8 @@ struct HistoryView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                     .padding(.bottom, 12)
-                    
-                    // List
-                    if (selectedTab == .sent ? sentItems : receivedItems).isEmpty {
+
+                    if visibleItems.isEmpty {
                         Spacer()
                         VStack(spacing: 12) {
                             Image(systemName: selectedTab == .sent ? "tray" : "tray.and.arrow.down")
@@ -51,14 +50,14 @@ struct HistoryView: View {
                         Spacer()
                     } else {
                         List {
-                            ForEach(selectedTab == .sent ? sentItems : receivedItems) { item in
-                                HistoryRow(item: item, isWhite: isWhite, palette: palette)
+                            ForEach(visibleItems) { item in
+                                HistoryRow(item: item, isWhite: isWhite, palette: palette, tappable: true)
                                     .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                         Button(role: .destructive) {
-                                            settings.history.removeAll { $0.id == item.id }
-                                            settings.saveHistory()
+                                            settings.removeHistoryItem(id: item.id)
                                         } label: {
                                             Label("Удалить", systemImage: "trash")
                                         }
@@ -73,14 +72,18 @@ struct HistoryView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        GlassIconButton(icon: Image(systemName: "xmark"), isWhite: isWhite) {
+                        GlassIconButton(icon: Image(systemName: "xmark"), isWhite: isWhite, size: 36) {
                             dismiss()
                         }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        if !settings.history.isEmpty {
-                            GlassButton(label: "Очистить вкладку", icon: Image(systemName: "trash"), isWhite: isWhite, danger: true) {
+                        if !visibleItems.isEmpty {
+                            Button(role: .destructive) {
                                 settings.clearHistory(direction: selectedTab)
+                            } label: {
+                                Text("Очистить")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(palette.danger)
                             }
                         }
                     }
@@ -97,38 +100,53 @@ private struct TabButton: View {
     let isWhite: Bool
     let palette: GlassPalette
     let action: () -> Void
-    
+
     var body: some View {
-        Button(action: {
+        Button {
             HapticManager.impact(.light)
             action()
-        }) {
-            GlassCard(isWhite: isWhite, radius: 999, blur: 0, tint: isSelected ? palette.accent : nil, padding: EdgeInsets(top: 12, leading: 18, bottom: 12, trailing: 18)) {
-                HStack(spacing: 8) {
+        } label: {
+            GlassCard(
+                isWhite: isWhite,
+                radius: 999,
+                blur: 0,
+                tint: isSelected ? palette.accent : nil,
+                padding: EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14)
+            ) {
+                HStack(spacing: 6) {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 15, weight: .medium))
                     Text(title)
                         .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
-                .foregroundStyle(isSelected ? (isWhite ? .black : .white) : palette.fg)
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(isSelected ? palette.accent : palette.fg)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GlassPressStyle())
     }
 }
 
-private struct HistoryRow: View {
+struct HistoryRow: View {
     let item: TransferHistoryItem
     let isWhite: Bool
     let palette: GlassPalette
-    
+    var tappable: Bool = false
+
     var body: some View {
-        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)) {
+        let row = GlassCard(
+            isWhite: isWhite,
+            radius: 20,
+            blur: 8,
+            padding: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+        ) {
             HStack(spacing: 12) {
                 Image(systemName: item.direction.icon)
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(item.direction.color)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.fileName)
                         .font(.system(size: 14, weight: .semibold))
@@ -138,23 +156,28 @@ private struct HistoryRow: View {
                         .font(.system(size: 12))
                         .foregroundStyle(palette.subtle)
                 }
-                
+
                 Spacer()
-                
-                if item.direction == .received {
-                    Image(systemName: "doc.on.doc")
+
+                if tappable && item.direction == .received {
+                    Image(systemName: "folder")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(palette.subtle)
                 }
             }
         }
-        .onTapGesture {
-            if item.direction == .received {
-                let url = URL(fileURLWithPath: item.savedPath)
-                if FileManager.default.fileExists(atPath: url.path) {
-                    UIApplication.shared.open(url)
+
+        if tappable && item.direction == .received {
+            Button {
+                if FileManager.default.fileExists(atPath: item.savedPath) {
+                    FileOpener.revealFolder(containing: item.savedPath)
                 }
+            } label: {
+                row
             }
+            .buttonStyle(GlassPressStyle(scale: 0.98))
+        } else {
+            row
         }
     }
 }

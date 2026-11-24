@@ -1,29 +1,28 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 struct SettingsView: View {
-    @Environment(\.dismiss) var dismiss
-    @StateObject var settings = SettingsService.shared
-    @State private var saveDirText: String = ""
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: SettingsService
     @State private var nameText: String = ""
     @State private var showFolderPicker = false
-    
+
     var body: some View {
         let isWhite = settings.isWhiteTheme
         let palette = GlassPalette(isWhite: isWhite)
-        
+
         LiquidBackground(isWhite: isWhite) {
             NavigationStack {
                 List {
-                    // Theme
-                    Section {
-                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
+                    row {
+                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: cardPadding) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Белый фон")
+                                    Text("Светлая тема")
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundStyle(palette.fg)
-                                    Text(isWhite ? "Включён белый фон" : "Включён OLED-чёрный фон")
+                                    Text(isWhite ? "Светлый фон" : "OLED-чёрный фон")
                                         .font(.system(size: 13))
                                         .foregroundStyle(palette.subtle)
                                 }
@@ -33,121 +32,106 @@ struct SettingsView: View {
                                     .tint(palette.accent)
                             }
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    } header: {
-                        GlassLabel("ОБЩЕЕ", isWhite: isWhite)
-                            .padding(.leading, 16)
                     }
-                    
-                    // Device Name
-                    Section {
-                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
+
+                    row {
+                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: cardPadding) {
                             VStack(alignment: .leading, spacing: 12) {
                                 GlassLabel("НАЗВАНИЕ УСТРОЙСТВА", isWhite: isWhite)
-                                GlassTextField(text: $nameText, isWhite: isWhite, placeholder: "iPhone", onSubmit: {
-                                    settings.deviceName = nameText.trimmingCharacters(in: .whitespaces).isEmpty ? nil : nameText.trimmingCharacters(in: .whitespaces)
-                                })
+                                GlassTextField(
+                                    text: $nameText,
+                                    isWhite: isWhite,
+                                    placeholder: UIDevice.current.name,
+                                    onSubmit: commitName
+                                )
                                 Text("Так вас видят другие устройства")
                                     .font(.system(size: 12))
                                     .foregroundStyle(palette.subtle)
                             }
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
-                    
-                    // Save Directory
-                    Section {
-                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
+
+                    row {
+                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: cardPadding) {
                             VStack(alignment: .leading, spacing: 12) {
                                 GlassLabel("ПАПКА СОХРАНЕНИЯ", isWhite: isWhite)
-                                
-                                HStack {
-                                    GlassTextField(text: $saveDirText, isWhite: isWhite, placeholder: "По умолчанию: Documents/FastDrop", onSubmit: {
-                                        settings.customSaveDirectory = saveDirText.trimmingCharacters(in: .whitespaces).isEmpty ? nil : saveDirText.trimmingCharacters(in: .whitespaces)
-                                    })
-                                    
-                                    Button(action: { showFolderPicker = true }) {
-                                        Image(systemName: "folder")
-                                            .font(.system(size: 20, weight: .medium))
-                                            .foregroundStyle(palette.subtle)
-                                            .frame(width: 44, height: 44)
+
+                                Text(settings.saveFolderDescription)
+                                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(palette.fg)
+                                    .lineLimit(2)
+
+                                HStack(spacing: 8) {
+                                    GlassChip(
+                                        label: "Выбрать папку",
+                                        icon: Image(systemName: "folder"),
+                                        isWhite: isWhite
+                                    ) {
+                                        showFolderPicker = true
                                     }
-                                }
-                                
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        GlassChip(label: "Выбрать папку", icon: Image(systemName: "folder"), isWhite: isWhite) {
-                                            showFolderPicker = true
-                                        }
+                                    if settings.usesCustomSaveFolder {
                                         GlassChip(label: "По умолчанию", isWhite: isWhite) {
-                                            saveDirText = ""
-                                            settings.customSaveDirectory = nil
+                                            settings.resetSaveFolder()
                                         }
                                     }
                                 }
-                                
-                                Text("Текущая: \(settings.saveDirectory().path)")
-                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+
+                                Text("По умолчанию файлы лежат в «Файлы → На iPhone → FastDrop».")
+                                    .font(.system(size: 12))
                                     .foregroundStyle(palette.subtle)
-                                    .lineLimit(1)
                             }
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
-                    
-                    // History
-                    Section {
-                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
+
+                    row {
+                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: cardPadding) {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
                                     GlassLabel("ИСТОРИЯ (\(settings.history.count))", isWhite: isWhite)
                                     Spacer()
                                     if !settings.history.isEmpty {
-                                        GlassButton(label: "Очистить", icon: Image(systemName: "trash"), isWhite: isWhite, danger: true) {
+                                        Button(role: .destructive) {
                                             settings.clearHistory()
+                                        } label: {
+                                            Text("Очистить")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundStyle(palette.danger)
                                         }
                                     }
                                 }
-                                
+
                                 if settings.history.isEmpty {
                                     Text("История пока пуста")
                                         .font(.system(size: 14))
                                         .foregroundStyle(palette.subtle)
                                         .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 20)
+                                        .padding(.vertical, 12)
                                 } else {
                                     VStack(spacing: 8) {
-                                        ForEach(settings.history.prefix(20)) { item in
+                                        ForEach(settings.history.prefix(5)) { item in
                                             HistoryRow(item: item, isWhite: isWhite, palette: palette)
                                         }
                                     }
                                 }
                             }
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
-                    
-                    // About
-                    Section {
-                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
+
+                    row {
+                        GlassCard(isWhite: isWhite, radius: 20, blur: 8, padding: cardPadding) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("FastDrop v\(NetworkConstants.appVersion)")
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(palette.fg)
-                                Text("Высокоскоростная передача файлов по локальной сети")
+                                Text("Быстрая передача файлов по локальной сети")
                                     .font(.system(size: 13))
                                     .foregroundStyle(palette.subtle)
-                                Text("TCP порт: \(NetworkConstants.transferPort) · UDP порт: \(NetworkConstants.discoveryPort)")
+                                Text("TCP \(String(NetworkConstants.transferPort)) · Bonjour \(NetworkConstants.serviceType)")
                                     .font(.system(size: 12, weight: .medium, design: .monospaced))
                                     .foregroundStyle(palette.subtle)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
                 }
                 .listStyle(.plain)
@@ -156,47 +140,38 @@ struct SettingsView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        GlassIconButton(icon: Image(systemName: "xmark"), isWhite: isWhite) {
+                        GlassIconButton(icon: Image(systemName: "xmark"), isWhite: isWhite, size: 36) {
                             dismiss()
                         }
                     }
                 }
             }
         }
-        .onAppear {
-            nameText = settings.deviceName ?? ""
-            saveDirText = settings.customSaveDirectory ?? ""
-        }
+        .onAppear { nameText = settings.deviceName ?? "" }
+        .onDisappear { commitName() }
         .fileImporter(isPresented: $showFolderPicker, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result {
-                saveDirText = url.path
-                settings.customSaveDirectory = url.path
+                settings.setSaveFolder(url)
             }
         }
     }
-}
 
-private struct HistoryRow: View {
-    let item: TransferHistoryItem
-    let isWhite: Bool
-    let palette: GlassPalette
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: item.direction.icon)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(item.direction.color)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.fileName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(palette.fg)
-                    .lineLimit(1)
-                Text("\(item.direction.rawValue) · \(item.formattedSize) · \(item.formattedDate)")
-                    .font(.system(size: 12))
-                    .foregroundStyle(palette.subtle)
-            }
+    private var cardPadding: EdgeInsets {
+        EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)
+    }
+
+    private func row<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+    }
+
+    private func commitName() {
+        let trimmed = nameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newValue: String? = trimmed.isEmpty ? nil : trimmed
+        if newValue != settings.deviceName {
+            settings.deviceName = newValue
         }
-        .padding(.vertical, 4)
     }
 }
