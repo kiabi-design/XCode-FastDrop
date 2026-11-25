@@ -72,7 +72,7 @@ extension View {
         self
             .background(.ultraThinMaterial, in: shape)
             .background((tint ?? .clear).opacity(0.18), in: shape)
-            .overlay(shape.strokeBorder(Color.white.opacity(0.22), lineWidth: 0.6))
+            .overlay(shape.stroke(Color.white.opacity(0.22), lineWidth: 0.6))
             .shadow(color: .black.opacity(0.10), radius: 12, y: 5)
     }
 
