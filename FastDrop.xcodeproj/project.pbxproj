@@ -51,6 +51,10 @@
 			isa = PBXBuildFile;
 			fileRef = EAF37D253870AE0FBE02D7C0;
 		};
+		DB1CCB5C017961E031548344 = {
+			isa = PBXBuildFile;
+			fileRef = 9ACEF2D6C72E1A2764A5E091;
+		};
 		DD0AD4DE04D206E8B736F8EA = {
 			isa = PBXBuildFile;
 			fileRef = A412F372DFCC28CB1B94F165;
@@ -102,6 +106,12 @@
 			isa = PBXFileReference;
 			lastKnownFileType = text.plist.xml;
 			path = Info.plist;
+			sourceTree = "<group>";
+		};
+		9ACEF2D6C72E1A2764A5E091 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Haptics.swift;
 			sourceTree = "<group>";
 		};
 		9EBC8452B3C0DE7A9D7B1381 = {
@@ -190,6 +200,7 @@
 			isa = PBXGroup;
 			children = (
 				60948A68B17F7840580FBDED,
+				9ACEF2D6C72E1A2764A5E091,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -318,6 +329,7 @@
 				5FA1AF85AB710BCF2EB03BC8,
 				D37C53104361F94851D1813A,
 				54B7F1D1FECCF9BB7AD31830,
+				DB1CCB5C017961E031548344,
 				80E3F8EF0E98AB3ACDC899D6,
 				7F226F309DCDC623E9FB54A4,
 				9CB2D26B84196A0FD42DA00B,
@@ -337,7 +349,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FastDrop/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fastdrop;
@@ -354,7 +366,7 @@
 			name = Release;
 			buildSettings = {
 				SDKROOT = iphoneos;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SWIFT_VERSION = 5.0;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -376,7 +388,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FastDrop/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fastdrop;
@@ -393,7 +405,7 @@
 			name = Debug;
 			buildSettings = {
 				SDKROOT = iphoneos;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SWIFT_VERSION = 5.0;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
