@@ -2,193 +2,233 @@ import SwiftUI
 
 struct TransferView: View {
     @ObservedObject var viewModel: HomeViewModel
-    @EnvironmentObject private var settings: SettingsService
 
     var body: some View {
-        let isWhite = settings.isWhiteTheme
-        let palette = GlassPalette(isWhite: isWhite)
         let p = viewModel.transferProgress
 
-        LiquidBackground(isWhite: isWhite) {
+        ZStack {
+            FDBackground()
+
             VStack(spacing: 0) {
-                header(p: p, isWhite: isWhite, palette: palette)
+                header(p)
 
-                Spacer()
+                Spacer(minLength: 12)
 
-                GlassCard(
-                    isWhite: isWhite,
-                    radius: 36,
-                    blur: 15,
-                    padding: EdgeInsets(top: 24, leading: 24, bottom: 24, trailing: 24)
-                ) {
-                    VStack(spacing: 20) {
-                        HStack(alignment: .lastTextBaseline, spacing: 6) {
-                            Text(String(format: "%.1f", p.speedMBps))
-                                .font(.system(size: 52, weight: .bold, design: .rounded))
-                                .foregroundStyle(palette.fg)
-                                .contentTransition(.numericText())
-                            Text("МБ/с")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(palette.subtle)
-                            Spacer()
-                        }
+                ring(p)
 
-                        Text(p.etaText)
-                            .font(.system(size: 15, weight: .medium, design: .monospaced))
-                            .foregroundStyle(palette.subtle)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        GlassProgressBar(
-                            value: p.progress,
-                            isWhite: isWhite,
-                            color: progressColor(p, palette),
-                            height: 12
-                        )
-
-                        HStack {
-                            Text(p.percentText)
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                .foregroundStyle(palette.fg)
-                            Spacer()
-                            Text("\(p.formattedTransferred) / \(p.formattedTotal)")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                .foregroundStyle(palette.subtle)
-                        }
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(p.fileName.isEmpty ? "Файл" : p.fileName)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(palette.fg)
-                                    .lineLimit(2)
-
-                                if p.isCompleted && !p.isError && p.savedFilePath != nil {
-                                    Spacer()
-                                    GlassIconButton(
-                                        icon: Image(systemName: "folder.fill"),
-                                        isWhite: isWhite,
-                                        size: 42
-                                    ) {
-                                        viewModel.openReceivedFolder()
-                                    }
-                                }
-                            }
-
-                            Text(p.statusText)
-                                .font(.system(size: 14))
-                                .foregroundStyle(statusColor(p, palette))
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        if p.isCompleted && !p.isError {
-                            HStack(spacing: 10) {
-                                StatCell(label: "Средняя", value: p.avgSpeedMBps, palette: palette)
-                                StatCell(label: "Макс", value: p.maxSpeedMBps, palette: palette)
-                                StatCell(label: "Мин", value: p.minSpeedMBps, palette: palette)
-                            }
-                        }
-                    }
+                VStack(spacing: 6) {
+                    Text(p.fileName.isEmpty ? "Файл" : p.fileName)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                    Text(p.statusText)
+                        .font(.subheadline)
+                        .foregroundStyle(statusColor(p))
+                        .multilineTextAlignment(.center)
                 }
-                .padding(.horizontal, 16)
+                .padding(.top, 22)
+                .padding(.horizontal, 12)
 
-                Spacer()
+                Spacer(minLength: 12)
 
-                bottomActions(p: p, isWhite: isWhite)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+                stats(p)
+                    .padding(.bottom, 16)
+
+                actions(p)
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
         }
     }
 
-    private func header(p: TransferProgress, isWhite: Bool, palette: GlassPalette) -> some View {
+    // MARK: - Parts
+
+    private func header(_ p: TransferProgress) -> some View {
         HStack {
-            GlassChip(
-                label: p.totalCount > 1 ? "\(p.currentIndex) / \(p.totalCount)" : (p.isSending ? "Отправка" : "Приём"),
-                icon: Image(systemName: p.isSending ? "arrow.up.circle.fill" : "arrow.down.circle.fill"),
-                isWhite: isWhite,
-                selected: true
-            ) {}
-            .allowsHitTesting(false)
+            Label(
+                p.totalCount > 1 ? "\(p.currentIndex) из \(p.totalCount)" : (p.isSending ? "Отправка" : "Приём"),
+                systemImage: p.isSending ? "arrow.up.circle.fill" : "arrow.down.circle.fill"
+            )
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .fdGlass(in: Capsule())
 
             Spacer()
 
             if viewModel.isTransferring {
-                GlassIconButton(icon: Image(systemName: "xmark"), isWhite: isWhite, danger: true) {
+                FDIconButton(systemName: "xmark", tint: .red) {
                     viewModel.cancelTransfer()
                 }
-            } else if p.isCompleted && !p.isError {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 36, weight: .light))
-                    .foregroundStyle(palette.success)
             }
         }
-        .padding(.horizontal, 20)
         .padding(.top, 12)
     }
 
+    private func ring(_ p: TransferProgress) -> some View {
+        ZStack {
+            FDProgressRing(value: p.progress, color: ringColor(p), lineWidth: 18)
+
+            VStack(spacing: 2) {
+                if p.isError {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 58))
+                        .foregroundStyle(.red)
+                } else if p.isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundStyle(Color.fdAccent)
+                        .symbolEffect(.bounce, value: p.isCompleted)
+                } else {
+                    Text(String(format: "%.1f", p.speedMBps))
+                        .font(.system(size: 58, weight: .bold, design: .rounded))
+                        .contentTransition(.numericText())
+                    Text("МБ/с")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Text(p.percentText)
+                        .font(.footnote.monospaced())
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                }
+            }
+        }
+        .frame(width: 252, height: 252)
+    }
+
+    private func stats(_ p: TransferProgress) -> some View {
+        HStack(spacing: 0) {
+            if p.isCompleted && !p.isError {
+                StatCell(title: "Средняя", value: speedText(p.avgSpeedMBps), unit: "МБ/с")
+                StatDivider()
+                StatCell(title: "Макс.", value: speedText(p.maxSpeedMBps), unit: "МБ/с")
+                StatDivider()
+                StatCell(title: "Мин.", value: speedText(p.minSpeedMBps), unit: "МБ/с")
+            } else {
+                StatCell(title: "Осталось", value: p.etaText, unit: nil)
+                StatDivider()
+                StatCell(title: "Передано", value: p.formattedTransferred, unit: nil)
+                StatDivider()
+                StatCell(title: "Всего", value: p.formattedTotal, unit: nil)
+            }
+        }
+        .fdCard(radius: 28, padding: 14)
+    }
+
     @ViewBuilder
-    private func bottomActions(p: TransferProgress, isWhite: Bool) -> some View {
+    private func actions(_ p: TransferProgress) -> some View {
         if viewModel.isTransferring {
-            GlassButton(label: "Отмена", icon: Image(systemName: "xmark"), isWhite: isWhite, danger: true, expand: true) {
+            Button(role: .destructive) {
                 viewModel.cancelTransfer()
+            } label: {
+                Label("Отменить", systemImage: "xmark")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
             }
+            .fdButtonStyle()
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .tint(.red)
         } else if p.isError {
-            GlassButton(label: "Закрыть", isWhite: isWhite, expand: true) {
+            Button {
                 viewModel.doneTransfer()
+            } label: {
+                Text("Закрыть")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
             }
-        } else if p.isSending {
-            HStack(spacing: 12) {
-                GlassButton(label: "Готово", isWhite: isWhite, active: true, expand: true) {
-                    viewModel.doneTransfer()
-                }
-                GlassButton(label: "Ещё", icon: Image(systemName: "plus"), isWhite: isWhite, expand: true) {
-                    viewModel.sendMore()
-                }
-            }
+            .fdButtonStyle(prominent: true)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
         } else {
-            GlassButton(label: "Готово", isWhite: isWhite, active: true, expand: true) {
-                viewModel.doneTransfer()
+            HStack(spacing: 12) {
+                if p.isSending {
+                    Button {
+                        viewModel.sendMore()
+                    } label: {
+                        Label("Ещё", systemImage: "plus")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                    }
+                    .fdButtonStyle()
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
+                } else if p.savedFilePath != nil {
+                    Button {
+                        viewModel.openReceivedFolder()
+                    } label: {
+                        Label("Папка", systemImage: "folder")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                    }
+                    .fdButtonStyle()
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
+                }
+
+                Button {
+                    viewModel.doneTransfer()
+                } label: {
+                    Text("Готово")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .fdButtonStyle(prominent: true)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
             }
         }
     }
 
-    private func progressColor(_ p: TransferProgress, _ palette: GlassPalette) -> Color {
-        if p.isError { return palette.danger }
-        if p.isCompleted { return palette.success }
-        return palette.accent
+    // MARK: - Helpers
+
+    private func ringColor(_ p: TransferProgress) -> Color {
+        if p.isError { return .red }
+        return .fdAccent
     }
 
-    private func statusColor(_ p: TransferProgress, _ palette: GlassPalette) -> Color {
-        if p.isError { return palette.danger }
-        if p.isCompleted { return palette.success }
-        return palette.subtle
+    private func statusColor(_ p: TransferProgress) -> Color {
+        if p.isError { return .red }
+        if p.isCompleted { return .fdAccent }
+        return .secondary
+    }
+
+    private func speedText(_ value: Double) -> String {
+        value > 0 ? String(format: "%.1f", value) : "—"
     }
 }
 
 private struct StatCell: View {
-    let label: String
-    let value: Double
-    let palette: GlassPalette
+    let title: String
+    let value: String
+    let unit: String?
 
     var body: some View {
-        GlassCard(
-            isWhite: palette.isWhite,
-            radius: 18,
-            blur: 0,
-            padding: EdgeInsets(top: 10, leading: 8, bottom: 10, trailing: 8)
-        ) {
-            VStack(spacing: 4) {
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(palette.subtle)
-                Text(value > 0 ? String(format: "%.1f", value) : "—")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(palette.fg)
-                Text("МБ/с")
-                    .font(.system(size: 10))
-                    .foregroundStyle(palette.subtle)
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.headline.monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            if let unit = unit {
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct StatDivider: View {
+    var body: some View {
+        Divider().frame(height: 34)
     }
 }
