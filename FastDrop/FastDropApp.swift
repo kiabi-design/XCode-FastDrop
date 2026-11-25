@@ -8,7 +8,8 @@ struct FastDropApp: App {
         WindowGroup {
             HomeView()
                 .environmentObject(settings)
-                .preferredColorScheme(settings.isWhiteTheme ? .light : .dark)
+                .tint(.fdAccent)
+                .preferredColorScheme(settings.appearance.colorScheme)
         }
     }
 }
