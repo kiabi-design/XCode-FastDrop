@@ -2,6 +2,28 @@ import Foundation
 import SwiftUI
 import UIKit
 
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system, light, dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: return "Системная"
+        case .light: return "Светлая"
+        case .dark: return "Тёмная"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 /// A writable folder that may need security-scoped access for the duration of a transfer.
 struct SaveAccess {
     let url: URL
@@ -21,7 +43,7 @@ final class SettingsService: ObservableObject {
     static let maxHistoryItems = 100
 
     private enum Keys {
-        static let theme = "isWhiteTheme"
+        static let appearance = "appearanceMode"
         static let deviceName = "deviceName"
         static let history = "transferHistory"
         static let saveBookmark = "saveFolderBookmark"
@@ -30,8 +52,8 @@ final class SettingsService: ObservableObject {
 
     private let defaults = UserDefaults.standard
 
-    @Published var isWhiteTheme: Bool {
-        didSet { defaults.set(isWhiteTheme, forKey: Keys.theme) }
+    @Published var appearance: AppearanceMode {
+        didSet { defaults.set(appearance.rawValue, forKey: Keys.appearance) }
     }
 
     @Published var deviceName: String? {
@@ -42,7 +64,7 @@ final class SettingsService: ObservableObject {
     @Published private(set) var history: [TransferHistoryItem]
 
     private init() {
-        isWhiteTheme = defaults.bool(forKey: Keys.theme)
+        appearance = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearance) ?? "") ?? .system
         deviceName = defaults.string(forKey: Keys.deviceName)
         saveFolderName = defaults.string(forKey: Keys.saveFolderName)
 
