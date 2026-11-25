@@ -22,6 +22,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select newest Xcode (Liquid Glass needs the iOS 26+ SDK)
+        run: |
+          LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -n "$LATEST" ]; then
+            echo "Using $LATEST"
+            sudo xcode-select -s "$LATEST/Contents/Developer"
+          fi
+
       - name: Show toolchain
         run: |
           xcodebuild -version
