@@ -59,9 +59,9 @@ def fmt(value, level: int) -> str:
 
 src_root = ROOT / APP
 objects = {}          # id -> dict
-sources = []          # build file ids
+sources = []          # build file ids (swift + metal)
 resources = []        # build file ids
-metal_files = []      # metal shader files
+metal_count = [0]     # track .metal files (mutable for closure)
 
 
 def add(obj_id, obj):
@@ -92,7 +92,8 @@ def build_group(directory: Path, rel: str) -> str:
             add(fid, {"isa": "PBXFileReference", "lastKnownFileType": "sourcecode.metal",
                       "path": entry.name, "sourceTree": "<group>"})
             add(bid, {"isa": "PBXBuildFile", "fileRef": fid})
-            metal_files.append(bid)
+            sources.append(bid)
+            metal_count[0] += 1
             children.append(fid)
         elif entry.suffix == ".xcassets":
             fid = uid("fref:" + entry_rel)
@@ -127,8 +128,6 @@ fw_phase = add(uid("phase:frameworks"), {"isa": "PBXFrameworksBuildPhase", "buil
                                           "files": [], "runOnlyForDeploymentPostprocessing": 0})
 res_phase = add(uid("phase:resources"), {"isa": "PBXResourcesBuildPhase", "buildActionMask": 2147483647,
                                           "files": resources, "runOnlyForDeploymentPostprocessing": 0})
-metal_phase = add(uid("phase:metal"), {"isa": "PBXSourcesBuildPhase", "buildActionMask": 2147483647,
-                                        "files": metal_files, "runOnlyForDeploymentPostprocessing": 0})
 
 common = {
     "SDKROOT": "iphoneos",
@@ -173,7 +172,7 @@ tgt_cfg_list = add(uid("cfglist:tgt"), {"isa": "XCConfigurationList", "buildConf
 
 target_id = add(uid("target"), {
     "isa": "PBXNativeTarget", "buildConfigurationList": tgt_cfg_list,
-    "buildPhases": [src_phase, fw_phase, res_phase, metal_phase], "buildRules": [], "dependencies": [],
+    "buildPhases": [src_phase, fw_phase, res_phase], "buildRules": [], "dependencies": [],
     "name": APP, "productName": APP, "productReference": product_ref,
     "productType": "com.apple.product-type.application"})
 
@@ -244,4 +243,5 @@ scheme = f'''<?xml version="1.0" encoding="UTF-8"?>
 '''
 (scheme_dir / f"{APP}.xcscheme").write_text(scheme, encoding="utf-8", newline="\n")
 
-print(f"Generated {APP}.xcodeproj with {len(sources)} Swift files, {len(resources)} resources, {len(metal_files)} Metal files")
+swift_count = len(sources) - metal_count[0]
+print(f"Generated {APP}.xcodeproj with {swift_count} Swift files, {metal_count[0]} Metal files, {len(resources)} resources")
