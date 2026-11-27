@@ -76,7 +76,9 @@ struct MetaballMetalView: UIViewRepresentable {
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
         func draw(in view: MTKView) {
-            guard let commandBuffer = renderer.commandQueue.makeCommandBuffer(),
+            // Skip if drawable size is zero (view not laid out yet)
+            guard view.drawableSize.width > 0, view.drawableSize.height > 0,
+                  let commandBuffer = renderer.commandQueue.makeCommandBuffer(),
                   let drawable = view.currentDrawable,
                   let descriptor = view.currentRenderPassDescriptor else { return }
 

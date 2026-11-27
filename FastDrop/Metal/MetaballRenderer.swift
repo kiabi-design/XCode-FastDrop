@@ -209,6 +209,9 @@ final class MetaballRenderer: ObservableObject {
 
         // Start with 3 drops like concept
         for _ in 0..<3 { addDrop() }
+
+        // Force initial uniform update so first frame has data
+        updateUniforms(time: 0)
     }
 
     deinit {
