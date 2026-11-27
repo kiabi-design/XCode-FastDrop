@@ -190,6 +190,11 @@ fragment float4 metaball_fragment(
     float2 uv = in.uv;
     float field = fieldTex.sample(fieldSampler, uv).r;
 
+    // ─── DEBUG: visualize raw field as grayscale ───
+    // Uncomment to see field values (0=black, 1=white)
+    return float4(field, field, field, 1.0);
+    // ────────────────────────────────────────────────
+
     // Read normals from buffer (fieldWidth x fieldHeight grid)
     int2 gridCoord = int2(uv * u.gridResolution);
     gridCoord = clamp(gridCoord, int2(0), int2(u.gridResolution - 1));
