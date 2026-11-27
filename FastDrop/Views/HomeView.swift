@@ -435,7 +435,7 @@ private struct PeerCard: View {
 private struct StatusDotStyle: LabelStyle {
     let color: Color
 
-    func makeBody(configuration: Configuration) -> View {
+    func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 5) {
             configuration.icon
                 .font(.system(size: 6))

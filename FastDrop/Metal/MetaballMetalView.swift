@@ -62,8 +62,8 @@ struct MetaballMetalView: UIViewRepresentable {
         private var lastPanLocation: CGPoint = .zero
 
         // Spring constants from concept: k=170, c=16
-        private let springK: CGFloat = 170
-        private let springC: CGFloat = 16
+        private let springK: Float = 170
+        private let springC: Float = 16
 
         init(renderer: MetaballRenderer,
              onDragChanged: ((CGPoint) -> Void)?,
@@ -127,7 +127,7 @@ struct MetaballMetalView: UIViewRepresentable {
             }
 
             // Update renderer with current drag offset
-            let dist = sqrt(newX * newX + newY * newY)
+            let dist = sqrtf(newX * newX + newY * newY)
             renderer.updateDragProgress(Float(dist / 150),
                                            dragOffset: SIMD2<Float>(newX, newY))
         }
