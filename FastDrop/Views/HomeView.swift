@@ -1,6 +1,5 @@
 import SwiftUI
 import UniformTypeIdentifiers
-import MetalKit
 
 // Import the DocumentPicker
 // (already in same module, no import needed)
@@ -9,12 +8,12 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @EnvironmentObject private var settings: SettingsService
 
-    @State private var metalView: MTKView?
+    @State private var metalRenderer: MetaballRenderer? = MetaballRenderer.makeRenderer()
 
     var body: some View {
         ZStack {
             // Metal background with drag-to-send
-            if let renderer = viewModel.metalRenderer {
+            if let renderer = metalRenderer {
                 MetaballBackgroundView(
                     renderer: renderer,
                     dragProgress: $viewModel.dragProgress,
@@ -23,11 +22,13 @@ struct HomeView: View {
                     canSend: viewModel.canSend
                 )
                 .ignoresSafeArea()
+                .onAppear {
+                    viewModel.setMetalRenderer(renderer)
+                }
             } else {
-                // Fallback while Metal renderer initializes
-                Color.clear
+                // Fallback if Metal unavailable
+                FDBackground()
                     .ignoresSafeArea()
-                    .background { FDBackground() }
             }
 
             NavigationStack {
@@ -108,17 +109,6 @@ struct HomeView: View {
                         .zIndex(10)
                 }
             }
-
-            // Hidden MTKView for Metal renderer initialization
-            MTKViewRepresentable(metalView: $metalView)
-                .frame(width: 1, height: 1)
-                .onChange(of: metalView) { _, newView in
-                    if let view = newView {
-                        if let renderer = MetaballRenderer(metalView: view) {
-                            viewModel.setMetalRenderer(renderer)
-                        }
-                    }
-                }
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.showTransferScreen)
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.showStatusCard)
@@ -374,26 +364,6 @@ struct HomeView: View {
         }
         return true
     }
-}
-
-// ──────────────────────────────────────────────────────────────
-// MTKView REPRESENTABLE FOR INITIALIZATION
-// ──────────────────────────────────────────────────────────────
-
-struct MTKViewRepresentable: UIViewRepresentable {
-    @Binding var metalView: MTKView?
-
-    func makeUIView(context: Context) -> MTKView {
-        let view = MTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
-        view.isPaused = true
-        view.enableSetNeedsDisplay = false
-        DispatchQueue.main.async {
-            self.metalView = view
-        }
-        return view
-    }
-
-    func updateUIView(_ uiView: MTKView, context: Context) {}
 }
 
 // MARK: - Peer card

@@ -201,6 +201,27 @@ final class MetaballRenderer: ObservableObject {
         metalView.enableSetNeedsDisplay = false
         metalView.isPaused = false
 
+        commonInit()
+    }
+
+    private init(device: MTLDevice, commandQueue: MTLCommandQueue, library: MTLLibrary) {
+        self.device = device
+        self.commandQueue = commandQueue
+        self.library = library
+        commonInit()
+    }
+
+    static func makeRenderer() -> MetaballRenderer? {
+        guard let device = MTLCreateSystemDefaultDevice(),
+              let commandQueue = device.makeCommandQueue(),
+              let library = device.makeDefaultLibrary() else {
+            print("❌ Failed to create Metal device/queue/library")
+            return nil
+        }
+        return MetaballRenderer(device: device, commandQueue: commandQueue, library: library)
+    }
+
+    private func commonInit() {
         setupPipelines()
         setupBuffers()
         setupTextures()
