@@ -33,10 +33,10 @@ struct HomeView: View {
             NavigationStack {
                 ScrollView {
                     VStack(spacing: 26) {
-                        if !viewModel.myIPs.isEmpty { myIPsSection }
+                        myIPsSection
                         peersSection
                         targetSection
-                        if !viewModel.selectedItems.isEmpty { selectedFilesSection }
+                        selectedFilesSection
                         // Drop zone replaced by Metal background
                         receiveToggle
                     }
@@ -147,57 +147,40 @@ struct HomeView: View {
             handleDrop(providers: providers)
         }
     }
-}
 
-// ──────────────────────────────────────────────────────────────
-// MTKView REPRESENTABLE FOR INITIALIZATION
-// ──────────────────────────────────────────────────────────────
+    // MARK: - Sections (defined as computed properties within body scope via closures)
 
-struct MTKViewRepresentable: UIViewRepresentable {
-    @Binding var metalView: MTKView?
-
-    func makeUIView(context: Context) -> MTKView {
-        let view = MTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
-        view.isPaused = true
-        view.enableSetNeedsDisplay = false
-        DispatchQueue.main.async {
-            self.metalView = view
-        }
-        return view
-    }
-
-    func updateUIView(_ uiView: MTKView, context: Context) {}
-}
-
-    // MARK: - Sections
-
+    @ViewBuilder
     private var myIPsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            FDSectionHeader("Мои IP-адреса")
+        if !viewModel.myIPs.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                FDSectionHeader("Мои IP-адреса")
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                FDGlassContainer(spacing: 8) {
-                    HStack(spacing: 8) {
-                        ForEach(viewModel.myIPs, id: \.self) { ip in
-                            Button {
-                                viewModel.copyIPToClipboard(ip)
-                            } label: {
-                                Label(ip, systemImage: "wifi")
-                                    .font(.subheadline.monospaced())
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
-                                    .fdGlass(in: Capsule(), interactive: true)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    FDGlassContainer(spacing: 8) {
+                        HStack(spacing: 8) {
+                            ForEach(viewModel.myIPs, id: \.self) { ip in
+                                Button {
+                                    viewModel.copyIPToClipboard(ip)
+                                } label: {
+                                    Label(ip, systemImage: "wifi")
+                                        .font(.subheadline.monospaced())
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .fdGlass(in: Capsule(), interactive: true)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 4)
                     }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 4)
                 }
             }
         }
     }
 
+    @ViewBuilder
     private var peersSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             FDSectionHeader("Устройства поблизости") {
@@ -251,6 +234,7 @@ struct MTKViewRepresentable: UIViewRepresentable {
         }
     }
 
+    @ViewBuilder
     private var targetSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             FDSectionHeader("Получатель")
@@ -287,85 +271,59 @@ struct MTKViewRepresentable: UIViewRepresentable {
         }
     }
 
+    @ViewBuilder
     private var selectedFilesSection: some View {
-        let total = viewModel.selectedItems.reduce(Int64(0)) { $0 + $1.sizeBytes }
+        if !viewModel.selectedItems.isEmpty {
+            let total = viewModel.selectedItems.reduce(Int64(0)) { $0 + $1.sizeBytes }
 
-        return VStack(alignment: .leading, spacing: 10) {
-            FDSectionHeader("Выбрано: \(viewModel.selectedItems.count)") {
-                Text(ByteCountFormatter.string(fromByteCount: total, countStyle: .file))
-                    .font(.footnote.monospaced())
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(viewModel.selectedItems.enumerated()), id: \.element.id) { index, item in
-                    HStack(spacing: 12) {
-                        Image(systemName: fileIconName(for: item.fileName))
-                            .font(.title3)
-                            .foregroundStyle(Color.fdAccent)
-                            .frame(width: 28)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.fileName)
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                            Text(ByteCountFormatter.string(fromByteCount: item.sizeBytes, countStyle: .file))
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Button {
-                            withAnimation { viewModel.removeSelectedItem(item) }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.vertical, 10)
-
-                    if index < viewModel.selectedItems.count - 1 {
-                        Divider()
-                    }
-                }
-            }
-            .fdCard(radius: 26, padding: 16)
-        }
-    }
-
-    private var dropZone: some View {
-        Button {
-            viewModel.pickFiles()
-        } label: {
-            VStack(spacing: 14) {
-                Image(systemName: viewModel.dropHover ? "tray.and.arrow.down.fill" : "plus.circle.fill")
-                    .font(.system(size: 44, weight: .light))
-                    .foregroundStyle(viewModel.dropHover ? Color.fdAccent : Color.secondary)
-                    .symbolEffect(.bounce, value: viewModel.dropHover)
-
-                VStack(spacing: 4) {
-                    Text(viewModel.dropHover ? "Отпустите файлы" : "Выбрать файлы")
-                        .font(.headline)
-                    Text("или перетащите их сюда")
-                        .font(.footnote)
+            VStack(alignment: .leading, spacing: 10) {
+                FDSectionHeader("Выбрано: \(viewModel.selectedItems.count)") {
+                    Text(ByteCountFormatter.string(fromByteCount: total, countStyle: .file))
+                        .font(.footnote.monospaced())
                         .foregroundStyle(.secondary)
                 }
+
+                VStack(spacing: 0) {
+                    ForEach(Array(viewModel.selectedItems.enumerated()), id: \.element.id) { index, item in
+                        HStack(spacing: 12) {
+                            Image(systemName: fileIconName(for: item.fileName))
+                                .font(.title3)
+                                .foregroundStyle(Color.fdAccent)
+                                .frame(width: 28)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.fileName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .lineLimit(1)
+                                Text(ByteCountFormatter.string(fromByteCount: item.sizeBytes, countStyle: .file))
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                withAnimation { viewModel.removeSelectedItem(item) }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.vertical, 10)
+
+                        if index < viewModel.selectedItems.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .fdCard(radius: 26, padding: 16)
             }
-            .foregroundStyle(.primary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 34)
-            .fdGlass(
-                in: RoundedRectangle(cornerRadius: 32, style: .continuous),
-                tint: viewModel.dropHover ? Color.fdAccent.opacity(0.35) : nil,
-                interactive: true
-            )
         }
-        .buttonStyle(.plain)
     }
 
+    @ViewBuilder
     private var receiveToggle: some View {
         HStack(spacing: 14) {
             Image(systemName: viewModel.receiveEnabled ? "arrow.down.circle.fill" : "arrow.down.circle")
@@ -388,31 +346,7 @@ struct MTKViewRepresentable: UIViewRepresentable {
         .fdCard(radius: 26, padding: 16)
     }
 
-    @ViewBuilder
-    private var sendBar: some View {
-        if !viewModel.selectedItems.isEmpty {
-            let title: String = viewModel.targetIP.isEmpty
-                ? "Выберите устройство"
-                : (viewModel.isTargetValid ? "Отправить на \(viewModel.targetIP)" : "Некорректный IP")
-
-            Button {
-                viewModel.startSending()
-            } label: {
-                Label(title, systemImage: "paperplane.fill")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-            }
-            .fdButtonStyle(prominent: true)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-            .disabled(!viewModel.canSend)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
-    }
-    // MARK: - Drop (inside HomeView)
+    // MARK: - Drop handling
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
         let accepted = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }
@@ -440,6 +374,27 @@ struct MTKViewRepresentable: UIViewRepresentable {
         }
         return true
     }
+}
+
+// ──────────────────────────────────────────────────────────────
+// MTKView REPRESENTABLE FOR INITIALIZATION
+// ──────────────────────────────────────────────────────────────
+
+struct MTKViewRepresentable: UIViewRepresentable {
+    @Binding var metalView: MTKView?
+
+    func makeUIView(context: Context) -> MTKView {
+        let view = MTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
+        view.isPaused = true
+        view.enableSetNeedsDisplay = false
+        DispatchQueue.main.async {
+            self.metalView = view
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: MTKView, context: Context) {}
+}
 
 // MARK: - Peer card
 
@@ -480,7 +435,7 @@ private struct PeerCard: View {
 private struct StatusDotStyle: LabelStyle {
     let color: Color
 
-    func makeBody(configuration: Configuration) -> some View {
+    func makeBody(configuration: Configuration) -> View {
         HStack(spacing: 5) {
             configuration.icon
                 .font(.system(size: 6))
@@ -508,5 +463,4 @@ private final class URLBox: @unchecked Sendable {
         defer { lock.unlock() }
         return storage
     }
-}
 }

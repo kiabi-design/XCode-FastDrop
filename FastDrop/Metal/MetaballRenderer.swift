@@ -159,8 +159,6 @@ final class MetaballRenderer: ObservableObject {
     private var nextDropRingTime: Double = 0
     private var currentRingingIndex: Int = -1
     private var scatterPositions: [SIMD2<Float>] = []
-    private var currentRingingIndex: Int = -1
-    private var scatterPositions: [SIMD2<Float>] = []
 
     // Ripple animation
     private var activeRipple: Bool = false

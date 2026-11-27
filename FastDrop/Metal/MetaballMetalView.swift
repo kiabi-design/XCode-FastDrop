@@ -219,7 +219,7 @@ struct MetaballMetalView: UIViewRepresentable {
 
                 // Auto-trigger at 96% (concept: p>=.96)
                 if progress >= 0.96 && canSend {
-                    triggerSend()
+                    triggerSend(gesture: gesture)
                     return
                 }
 
@@ -238,7 +238,7 @@ struct MetaballMetalView: UIViewRepresentable {
                 let shouldTrigger = dragDistance > 120 || hypot(velocity.x, velocity.y) > 500
 
                 if shouldTrigger && canSend() {
-                    triggerSend()
+                    triggerSend(gesture: gesture)
                 } else {
                     // Spring back
                     dragSpringActive = true
@@ -263,7 +263,7 @@ struct MetaballMetalView: UIViewRepresentable {
             renderer.drops.count > 0
         }
 
-        private func triggerSend() {
+        private func triggerSend(gesture: UIPanGestureRecognizer) {
             dragSpringActive = false
             dragVelocity = .zero
             dragOffset = .zero
@@ -276,8 +276,8 @@ struct MetaballMetalView: UIViewRepresentable {
             let scy = CGFloat(renderer.screenCenter.y)
             let sw = CGFloat(renderer.screenWidth)
             let sh = CGFloat(renderer.screenHeight)
-            let viewWidth = gesture.view!.bounds.width
-            let viewHeight = gesture.view!.bounds.height
+            let viewWidth = gesture.view?.bounds.width ?? 390
+            let viewHeight = gesture.view?.bounds.height ?? 844
 
             let targetX = scx / sw * viewWidth - sbcx / sw * viewWidth
             let targetY = scy / sh * viewHeight - sbcy / sh * viewHeight
