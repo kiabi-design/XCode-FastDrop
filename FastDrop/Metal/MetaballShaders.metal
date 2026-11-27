@@ -183,7 +183,7 @@ vertex VertexOut metaball_vertex(
 fragment float4 metaball_fragment(
     VertexOut in [[stage_in]],
     texture2d<float, access::sample> fieldTex [[texture(0)]],
-    texture2d<float2, access::sample> normalTex [[texture(1)]],
+    texture2d<float4, access::sample> normalTex [[texture(1)]],
     sampler fieldSampler [[sampler(0)]],
     constant Uniforms& u [[buffer(0)]]
 ) {

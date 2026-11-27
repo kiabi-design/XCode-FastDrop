@@ -330,7 +330,7 @@ final class MetaballRenderer: ObservableObject {
         fieldTextureB = device.makeTexture(descriptor: texDesc)
 
         let normalTexDesc = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .rg32Float,
+            pixelFormat: .rgba32Float,
             width: fieldWidth,
             height: fieldHeight,
             mipmapped: false
