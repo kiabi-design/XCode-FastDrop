@@ -222,17 +222,25 @@ final class MetaballRenderer: ObservableObject {
     }
 
     private func commonInit() {
+        print("🔧 MetaballRenderer: commonInit started")
         setupPipelines()
+        print("🔧 MetaballRenderer: pipelines created")
         setupBuffers()
+        print("🔧 MetaballRenderer: buffers created")
         setupTextures()
+        print("🔧 MetaballRenderer: textures created")
         setupGeometry()
+        print("🔧 MetaballRenderer: geometry created")
         startAnimationLoop()
+        print("🔧 MetaballRenderer: animation loop started")
 
         // Start with 3 drops like concept
         for _ in 0..<3 { addDrop() }
+        print("🔧 MetaballRenderer: 3 drops added, count=\(drops.count)")
 
         // Force initial uniform update so first frame has data
         updateUniforms(time: 0)
+        print("🔧 MetaballRenderer: initial uniforms updated")
     }
 
     deinit {
@@ -399,6 +407,10 @@ final class MetaballRenderer: ObservableObject {
 
         updatePhysics(dt: dt, currentTime: currentTime)
         updateUniforms(time: Float(currentTime))
+
+        if Int(currentTime * 10) % 60 == 0 {
+            print("🎬 MetaballRenderer: frameCallback dt=\(dt) drops=\(drops.count) sendScene=\(sendSceneActive)")
+        }
     }
 
     // ──────────────────────────────────────────────────────────────

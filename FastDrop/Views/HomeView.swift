@@ -8,7 +8,12 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @EnvironmentObject private var settings: SettingsService
 
-    @State private var metalRenderer: MetaballRenderer? = MetaballRenderer.makeRenderer()
+    @State private var metalRenderer: MetaballRenderer? = {
+        print("🏠 HomeView: Creating MetaballRenderer...")
+        let renderer = MetaballRenderer.makeRenderer()
+        print("🏠 HomeView: MetaballRenderer created: \(renderer != nil)")
+        return renderer
+    }()
 
     var body: some View {
         ZStack {
@@ -23,10 +28,12 @@ struct HomeView: View {
                 )
                 .ignoresSafeArea()
                 .onAppear {
+                    print("🏠 HomeView: MetaballBackgroundView appeared")
                     viewModel.setMetalRenderer(renderer)
                 }
             } else {
                 // Fallback if Metal unavailable
+                print("🏠 HomeView: Metal renderer unavailable, showing fallback")
                 FDBackground()
                     .ignoresSafeArea()
             }

@@ -20,6 +20,9 @@ struct MetaballMetalView: UIViewRepresentable {
         metalView.depthStencilPixelFormat = .depth32Float
         metalView.framebufferOnly = false
         metalView.backgroundColor = .clear
+        metalView.contentScaleFactor = UIScreen.main.scale
+        metalView.contentMode = .scaleToFill
+        metalView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handlePan(_:)))
         pan.maximumNumberOfTouches = 1
@@ -39,6 +42,12 @@ struct MetaballMetalView: UIViewRepresentable {
             screenCenter: SIMD2<Float>(Float(uiView.bounds.midX * scale), Float(uiView.bounds.midY * scale))
         )
     }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: MTKView, context: Context) -> CGSize? {
+        // Allow the MTKView to fill the GeometryReader
+        return nil
+    }
+}
 
     func makeCoordinator() -> Coordinator {
         Coordinator(renderer: renderer,
@@ -73,14 +82,19 @@ struct MetaballMetalView: UIViewRepresentable {
             self.onDragEnded = onDragEnded
         }
 
-        func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+        func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+            print("📐 MetaballMetalView: drawableSizeWillChange \(size)")
+        }
 
         func draw(in view: MTKView) {
             // Skip if drawable size is zero (view not laid out yet)
             guard view.drawableSize.width > 0, view.drawableSize.height > 0,
                   let commandBuffer = renderer.commandQueue.makeCommandBuffer(),
                   let drawable = view.currentDrawable,
-                  let descriptor = view.currentRenderPassDescriptor else { return }
+                  let descriptor = view.currentRenderPassDescriptor else {
+                print("⚠️ MetaballMetalView: draw skipped - drawableSize=\(view.drawableSize) drawable=\(view.currentDrawable != nil) descriptor=\(view.currentRenderPassDescriptor != nil)")
+                return
+            }
 
             // Update spring physics for drag return
             updateDragSpring(dt: 1.0/60.0)
@@ -99,6 +113,10 @@ struct MetaballMetalView: UIViewRepresentable {
             renderEncoder.endEncoding()
             commandBuffer.present(drawable)
             commandBuffer.commit()
+
+            if Int(CACurrentMediaTime() * 10) % 60 == 0 {
+                print("🎨 MetaballMetalView: frame rendered size=\(view.drawableSize)")
+            }
         }
 
         private func updateDragSpring(dt: Float) {
