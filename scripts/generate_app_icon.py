@@ -98,25 +98,45 @@ def create_icon(size: int) -> Image.Image:
 def main():
     icon_dir = "/tmp/XCode-FastDrop/FastDrop/Assets.xcassets/AppIcon.appiconset"
 
-    # Required sizes from Contents.json
+    # Required sizes from Contents.json - EXACT MATCH
+    # Each entry: (base_size, scale, idiom, filename_suffix)
+    # filename_suffix is appended to distinguish when multiple same size/scale/idiom
     sizes = [
-        (20, 1, "iphone"), (20, 2, "iphone"), (20, 3, "iphone"),
-        (29, 1, "iphone"), (29, 2, "iphone"), (29, 3, "iphone"),
-        (40, 1, "iphone"), (40, 2, "iphone"), (40, 3, "iphone"),
-        (60, 1, "iphone"), (60, 2, "iphone"), (60, 3, "iphone"),
-        (20, 1, "ipad"), (20, 2, "ipad"),
-        (29, 1, "ipad"), (29, 2, "ipad"),
-        (40, 1, "ipad"), (40, 2, "ipad"),
-        (76, 1, "ipad"), (76, 2, "ipad"),
-        (83.5, 2, "ipad"),
-        (1024, 1, "ios-marketing"),
+        # iphone
+        (20, 2, "iphone", ""),       # 20x20@2x.png
+        (20, 3, "iphone", ""),       # 20x20@3x.png
+        (29, 2, "iphone", ""),       # 29x29@2x.png
+        (29, 3, "iphone", ""),       # 29x29@3x.png
+        (40, 2, "iphone", ""),       # 40x40@2x.png
+        (40, 3, "iphone", ""),       # 40x40@3x.png
+        (60, 2, "iphone", ""),       # 60x60@2x.png
+        (60, 3, "iphone", ""),       # 60x60@3x.png
+        # ipad
+        (20, 1, "ipad", "@1x"),      # 20x20@1x~ipad.png
+        (20, 2, "ipad", ""),         # 20x20@2x~ipad.png
+        (29, 1, "ipad", "@1x"),      # 29x29@1x~ipad.png
+        (29, 2, "ipad", ""),         # 29x29@2x~ipad.png
+        (40, 1, "ipad", "@1x"),      # 40x40@1x~ipad.png
+        (40, 2, "ipad", ""),         # 40x40@2x~ipad.png
+        (76, 2, "ipad", ""),         # 76x76@2x~ipad.png
+        (83.5, 2, "ipad", "@2x"),       # 83.5x83.5@2x~ipad.png
+        # ios-marketing
+        (1024, 1, "ios-marketing", ""), # 1024x1024.png
     ]
 
-    for base_size, scale, idiom in sizes:
+    for base_size, scale, idiom, scale_suffix in sizes:
         size = int(base_size * scale)
-        filename = f"{int(base_size)}x{int(base_size)}"
-        if scale > 1:
-            filename += f"@{scale}x"
+        # Handle 83.5 special case
+        if base_size == 83.5:
+            base_name = "83.5x83.5"
+        else:
+            base_name = f"{int(base_size)}x{int(base_size)}"
+        if scale_suffix:
+            filename = f"{base_name}{scale_suffix}"
+        elif scale > 1:
+            filename = f"{base_name}@{scale}x"
+        else:
+            filename = base_name
         if idiom == "ipad":
             filename += "~ipad"
         filename += ".png"
