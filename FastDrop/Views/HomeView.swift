@@ -412,8 +412,7 @@ struct MTKViewRepresentable: UIViewRepresentable {
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
-
-    // MARK: - Drop
+    // MARK: - Drop (inside HomeView)
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
         let accepted = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }
@@ -441,25 +440,6 @@ struct MTKViewRepresentable: UIViewRepresentable {
         }
         return true
     }
-}
-
-/// Thread-safe collector for URLs delivered by NSItemProvider callbacks.
-private final class URLBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storage: [URL] = []
-
-    func append(_ url: URL) {
-        lock.lock()
-        storage.append(url)
-        lock.unlock()
-    }
-
-    var urls: [URL] {
-        lock.lock()
-        defer { lock.unlock() }
-        return storage
-    }
-}
 
 // MARK: - Peer card
 
@@ -510,4 +490,23 @@ private struct StatusDotStyle: LabelStyle {
                 .foregroundStyle(color)
         }
     }
+}
+
+/// Thread-safe collector for URLs delivered by NSItemProvider callbacks.
+private final class URLBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [URL] = []
+
+    func append(_ url: URL) {
+        lock.lock()
+        storage.append(url)
+        lock.unlock()
+    }
+
+    var urls: [URL] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+}
 }

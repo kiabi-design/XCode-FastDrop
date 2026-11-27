@@ -103,14 +103,20 @@ struct MetaballMetalView: UIViewRepresentable {
             guard dragSpringActive else { return }
 
             // Spring physics: v += (-k*x - c*v) * dt; x += v * dt
-            let dx = dragOffset.x
-            let dy = dragOffset.y
+            let dx = Float(dragOffset.x)
+            let dy = Float(dragOffset.y)
+            let dvx = Float(dragVelocity.x)
+            let dvy = Float(dragVelocity.y)
 
-            dragVelocity.x += (-springK * dx - springC * dragVelocity.x) * dt
-            dragVelocity.y += (-springK * dy - springC * dragVelocity.y) * dt
+            let newVX = dvx + (-springK * dx - springC * dvx) * dt
+            let newVY = dvy + (-springK * dy - springC * dvy) * dt
+            let newX = dx + newVX * dt
+            let newY = dy + newVY * dt
 
-            dragOffset.x += dragVelocity.x * dt
-            dragOffset.y += dragVelocity.y * dt
+            dragVelocity.x = CGFloat(newVX)
+            dragVelocity.y = CGFloat(newVY)
+            dragOffset.x = CGFloat(newX)
+            dragOffset.y = CGFloat(newY)
 
             // Check if settled
             if abs(dragOffset.x) < 0.3 && abs(dragOffset.y) < 0.3 &&
@@ -121,9 +127,11 @@ struct MetaballMetalView: UIViewRepresentable {
             }
 
             // Update renderer with current drag offset
-            renderer.updateDragProgress(Float(sqrt(dragOffset.x * dragOffset.x + dragOffset.y * dragOffset.y) / 150),
-                                       dragOffset: SIMD2<Float>(Float(dragOffset.x), Float(dragOffset.y)))
+            let dist = sqrt(newX * newX + newY * newY)
+            renderer.updateDragProgress(Float(dist / 150),
+                                           dragOffset: SIMD2<Float>(newX, newY))
         }
+
 
         @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
             let location = gesture.location(in: gesture.view)
