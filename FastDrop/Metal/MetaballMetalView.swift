@@ -164,17 +164,26 @@ struct MetaballMetalView: UIViewRepresentable {
 
                 // Clamp when dragging towards center (like concept)
                 if canSend {
-                    let buttonCenter = CGPoint(x: renderer.sendButtonCenter.x / CGFloat(renderer.screenWidth) * gesture.view!.bounds.width,
-                                               y: renderer.sendButtonCenter.y / CGFloat(renderer.screenHeight) * gesture.view!.bounds.height)
-                    let screenCenter = CGPoint(x: renderer.screenCenter.x / CGFloat(renderer.screenWidth) * gesture.view!.bounds.width,
-                                               y: renderer.screenCenter.y / CGFloat(renderer.screenHeight) * gesture.view!.bounds.height)
+                    let sbcx = CGFloat(renderer.sendButtonCenter.x)
+                    let sbcy = CGFloat(renderer.sendButtonCenter.y)
+                    let scx = CGFloat(renderer.screenCenter.x)
+                    let scy = CGFloat(renderer.screenCenter.y)
+                    let sw = CGFloat(renderer.screenWidth)
+                    let sh = CGFloat(renderer.screenHeight)
+                    let viewWidth = gesture.view!.bounds.width
+                    let viewHeight = gesture.view!.bounds.height
+
+                    let buttonCenter = CGPoint(x: sbcx / sw * viewWidth,
+                                               y: sbcy / sh * viewHeight)
+                    let screenCenter = CGPoint(x: scx / sw * viewWidth,
+                                               y: scy / sh * viewHeight)
 
                     let maxX = screenCenter.x - buttonCenter.x
                     let maxY = screenCenter.y - buttonCenter.y
 
                     newOffset.x = clamp(newOffset.x + (buttonCenter.x - start.x),
                                        -buttonCenter.x + 40,
-                                       gesture.view!.bounds.width - buttonCenter.x - 40) - (buttonCenter.x - start.x)
+                                       viewWidth - buttonCenter.x - 40) - (buttonCenter.x - start.x)
                     newOffset.y = clamp(newOffset.y + (buttonCenter.y - start.y),
                                        -buttonCenter.y + 40,
                                        buttonCenter.y + 24 - start.y) - (buttonCenter.y - start.y)
@@ -183,10 +192,13 @@ struct MetaballMetalView: UIViewRepresentable {
                 dragOffset = newOffset
 
                 // Progress calculation (distance to center / total distance)
-                let totalDist = hypot(renderer.sendButtonCenter.x - renderer.screenCenter.x,
-                                     renderer.sendButtonCenter.y - renderer.screenCenter.y)
-                let currentDist = hypot(renderer.sendButtonCenter.x + Float(dragOffset.x) - renderer.screenCenter.x,
-                                       renderer.sendButtonCenter.y + Float(dragOffset.y) - renderer.screenCenter.y)
+                let sbcx = CGFloat(renderer.sendButtonCenter.x)
+                let sbcy = CGFloat(renderer.sendButtonCenter.y)
+                let scx = CGFloat(renderer.screenCenter.x)
+                let scy = CGFloat(renderer.screenCenter.y)
+                let totalDist = hypot(sbcx - scx, sbcy - scy)
+                let currentDist = hypot(sbcx + dragOffset.x - scx,
+                                       sbcy + dragOffset.y - scy)
                 let progress = Float(max(0, min(1, 1 - currentDist / totalDist)))
 
                 // Half haptic at 50% (concept: half=true at p>.5)
@@ -250,8 +262,17 @@ struct MetaballMetalView: UIViewRepresentable {
             isDragging = false
 
             // Spring to center
-            let targetX = renderer.screenCenter.x / CGFloat(renderer.screenWidth) * gesture.view!.bounds.width - renderer.sendButtonCenter.x / CGFloat(renderer.screenWidth) * gesture.view!.bounds.width
-            let targetY = renderer.screenCenter.y / CGFloat(renderer.screenHeight) * gesture.view!.bounds.height - renderer.sendButtonCenter.y / CGFloat(renderer.screenHeight) * gesture.view!.bounds.height
+            let sbcx = CGFloat(renderer.sendButtonCenter.x)
+            let sbcy = CGFloat(renderer.sendButtonCenter.y)
+            let scx = CGFloat(renderer.screenCenter.x)
+            let scy = CGFloat(renderer.screenCenter.y)
+            let sw = CGFloat(renderer.screenWidth)
+            let sh = CGFloat(renderer.screenHeight)
+            let viewWidth = gesture.view!.bounds.width
+            let viewHeight = gesture.view!.bounds.height
+
+            let targetX = scx / sw * viewWidth - sbcx / sw * viewWidth
+            let targetY = scy / sh * viewHeight - sbcy / sh * viewHeight
 
             dragOffset = CGPoint(x: targetX, y: targetY)
             dragSpringActive = true
