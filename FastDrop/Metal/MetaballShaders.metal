@@ -183,13 +183,18 @@ vertex VertexOut metaball_vertex(
 fragment float4 metaball_fragment(
     VertexOut in [[stage_in]],
     texture2d<float, access::sample> fieldTex [[texture(0)]],
-    texture2d<float4, access::sample> normalTex [[texture(1)]],
+    constant float2* normals [[buffer(1)]],
     sampler fieldSampler [[sampler(0)]],
     constant Uniforms& u [[buffer(0)]]
 ) {
     float2 uv = in.uv;
     float field = fieldTex.sample(fieldSampler, uv).r;
-    float2 N = normalTex.sample(fieldSampler, uv).rg;
+
+    // Read normals from buffer (fieldWidth x fieldHeight grid)
+    int2 gridCoord = int2(uv * u.gridResolution);
+    gridCoord = clamp(gridCoord, int2(0), int2(u.gridResolution - 1));
+    int index = gridCoord.y * int(u.gridResolution.x) + gridCoord.x;
+    float2 N = normals[index];
 
     // Body alpha - smoothstep like feColorMatrix slope=.42 equivalent
     float bodyAlpha = smoothstep(u.threshold - 0.03, u.threshold + 0.03, field) * u.bodyOpacity;

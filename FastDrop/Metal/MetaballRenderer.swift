@@ -329,6 +329,8 @@ final class MetaballRenderer: ObservableObject {
         fieldTextureA = device.makeTexture(descriptor: texDesc)
         fieldTextureB = device.makeTexture(descriptor: texDesc)
 
+        // Normals buffer is used directly in fragment shader (no texture needed)
+        // normalsTexture is kept for compute shader output if needed
         let normalTexDesc = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: .rgba32Float,
             width: fieldWidth,
@@ -894,16 +896,6 @@ final class MetaballRenderer: ObservableObject {
         computeEncoder2.setBuffer(uniformsBuffer, offset: 0, index: 2)
         computeEncoder2.dispatchThreadgroups(groups, threadsPerThreadgroup: threadsPerGroup)
         computeEncoder2.endEncoding()
-
-        // Copy normals to texture
-        let blitEncoder2 = commandBuffer.makeBlitCommandEncoder()!
-        blitEncoder2.copy(from: normalsBuffer, sourceOffset: 0,
-                           sourceBytesPerRow: fieldWidth * 8,
-                           sourceBytesPerImage: 0,
-                           sourceSize: MTLSize(width: fieldWidth, height: fieldHeight, depth: 1),
-                           to: normalsTexture, destinationSlice: 0, destinationLevel: 0,
-                           destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
-        blitEncoder2.endEncoding()
     }
 
     func encodeRenderPasses(renderEncoder: MTLRenderCommandEncoder) {
@@ -911,7 +903,7 @@ final class MetaballRenderer: ObservableObject {
         renderEncoder.setRenderPipelineState(metaballRenderPipeline)
         renderEncoder.setVertexBuffer(quadVertexBuffer, offset: 0, index: 0)
         renderEncoder.setFragmentTexture(fieldTextureA, index: 0)
-        renderEncoder.setFragmentTexture(normalsTexture, index: 1)
+        renderEncoder.setFragmentBuffer(normalsBuffer, offset: 0, index: 1)
         renderEncoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
