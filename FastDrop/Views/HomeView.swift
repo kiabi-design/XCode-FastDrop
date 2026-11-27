@@ -1,12 +1,32 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import MetalKit
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @EnvironmentObject private var settings: SettingsService
 
+    @State private var metalView: MTKView?
+
     var body: some View {
         ZStack {
+            // Metal background with drag-to-send
+            if let renderer = viewModel.metalRenderer {
+                MetaballBackgroundView(
+                    renderer: renderer,
+                    dragProgress: $viewModel.dragProgress,
+                    isDragging: $viewModel.isDragging,
+                    onSendTrigger: { viewModel.startSending() },
+                    canSend: viewModel.canSend
+                )
+                .ignoresSafeArea()
+            } else {
+                // Fallback while Metal renderer initializes
+                Color.clear
+                    .ignoresSafeArea()
+                    .background { FDBackground() }
+            }
+
             NavigationStack {
                 ScrollView {
                     VStack(spacing: 26) {
@@ -14,15 +34,15 @@ struct HomeView: View {
                         peersSection
                         targetSection
                         if !viewModel.selectedItems.isEmpty { selectedFilesSection }
-                        dropZone
+                        // Drop zone replaced by Metal background
                         receiveToggle
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 160) // Space for send button
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .background { FDBackground() }
+                .background(Color.clear)
                 .navigationTitle("FastDrop")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -42,7 +62,6 @@ struct HomeView: View {
                         .accessibilityLabel("Настройки")
                     }
                 }
-                .safeAreaInset(edge: .bottom) { sendBar }
             }
 
             if viewModel.showStatusCard {
@@ -62,10 +81,33 @@ struct HomeView: View {
             }
 
             if viewModel.showTransferScreen {
-                TransferView(viewModel: viewModel)
+                if let renderer = viewModel.metalRenderer {
+                    TransferSceneView(
+                        renderer: renderer,
+                        viewModel: viewModel,
+                        onCancel: { viewModel.cancelTransfer() },
+                        onDone: { viewModel.doneTransfer() },
+                        onSendMore: { viewModel.sendMore() }
+                    )
                     .transition(.opacity)
                     .zIndex(10)
+                } else {
+                    TransferView(viewModel: viewModel)
+                        .transition(.opacity)
+                        .zIndex(10)
+                }
             }
+
+            // Hidden MTKView for Metal renderer initialization
+            MTKViewRepresentable(metalView: $metalView)
+                .frame(width: 1, height: 1)
+                .onChange(of: metalView) { _, newView in
+                    if let view = newView {
+                        if let renderer = MetaballRenderer(metalView: view) {
+                            viewModel.setMetalRenderer(renderer)
+                        }
+                    }
+                }
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.showTransferScreen)
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.showStatusCard)
@@ -88,6 +130,27 @@ struct HomeView: View {
             handleDrop(providers: providers)
         }
     }
+}
+
+// ──────────────────────────────────────────────────────────────
+// MTKView REPRESENTABLE FOR INITIALIZATION
+// ──────────────────────────────────────────────────────────────
+
+struct MTKViewRepresentable: UIViewRepresentable {
+    @Binding var metalView: MTKView?
+
+    func makeUIView(context: Context) -> MTKView {
+        let view = MTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
+        view.isPaused = true
+        view.enableSetNeedsDisplay = false
+        DispatchQueue.main.async {
+            self.metalView = view
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: MTKView, context: Context) {}
+}
 
     // MARK: - Sections
 

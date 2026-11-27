@@ -11,6 +11,10 @@
 			isa = PBXBuildFile;
 			fileRef = A138F0523192A606B872394D;
 		};
+		1406F637CA1511752BAA33B4 = {
+			isa = PBXBuildFile;
+			fileRef = 7B51F0EF797603C376E6F0BD;
+		};
 		4F9B90C5E0BB284D6D827CD3 = {
 			isa = PBXBuildFile;
 			fileRef = 186C23F6BA5C6A6C01D54C23;
@@ -27,6 +31,10 @@
 			isa = PBXBuildFile;
 			fileRef = 12F9D88EC6B3B6D5F4E2CDBF;
 		};
+		71C694197F1E9F41EBB36BE2 = {
+			isa = PBXBuildFile;
+			fileRef = 7409451655AAFA37AC535CE1;
+		};
 		7F226F309DCDC623E9FB54A4 = {
 			isa = PBXBuildFile;
 			fileRef = 9EBC8452B3C0DE7A9D7B1381;
@@ -38,6 +46,14 @@
 		855B780E5E44D31A3368D556 = {
 			isa = PBXBuildFile;
 			fileRef = EC15D0998812BE7B2E727416;
+		};
+		90EF42747B2FCDF76EBDEA2F = {
+			isa = PBXBuildFile;
+			fileRef = 580F4D9D83288150ACB80921;
+		};
+		9B8F15172C55DB9A7C3FC64E = {
+			isa = PBXBuildFile;
+			fileRef = 473E87074B91DB3A5A8411F8;
 		};
 		9CB2D26B84196A0FD42DA00B = {
 			isa = PBXBuildFile;
@@ -90,16 +106,40 @@
 			path = FileSender.swift;
 			sourceTree = "<group>";
 		};
+		473E87074B91DB3A5A8411F8 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.metal;
+			path = MetaballShaders.metal;
+			sourceTree = "<group>";
+		};
+		580F4D9D83288150ACB80921 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = TransferSceneView.swift;
+			sourceTree = "<group>";
+		};
 		60948A68B17F7840580FBDED = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
 			path = FileOpener.swift;
 			sourceTree = "<group>";
 		};
+		7409451655AAFA37AC535CE1 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = MetaballRenderer.swift;
+			sourceTree = "<group>";
+		};
 		75E22708B921172BC03CCEE2 = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
 			path = AsyncConnection.swift;
+			sourceTree = "<group>";
+		};
+		7B51F0EF797603C376E6F0BD = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = MetaballMetalView.swift;
 			sourceTree = "<group>";
 		};
 		99D9A1F7A4AD9C858DE21549 = {
@@ -196,6 +236,17 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		47565C4C7186BBB8249AF200 = {
+			isa = PBXGroup;
+			children = (
+				7B51F0EF797603C376E6F0BD,
+				7409451655AAFA37AC535CE1,
+				473E87074B91DB3A5A8411F8,
+				580F4D9D83288150ACB80921,
+			);
+			path = Metal;
+			sourceTree = "<group>";
+		};
 		7EEF2AD006640BD7BDE7D573 = {
 			isa = PBXGroup;
 			children = (
@@ -227,6 +278,7 @@
 		C665ECB60C09EC9208678593 = {
 			isa = PBXGroup;
 			children = (
+				47565C4C7186BBB8249AF200,
 				B7982B066F606584FD25E414,
 				BDA9067EBCCFA4ACB42F5432,
 				7EEF2AD006640BD7BDE7D573,
@@ -264,6 +316,7 @@
 				7A70D71C385290AF96BF1031,
 				424153ED3CD079DB4DB459AF,
 				285BB1C1430063331E9F5DD0,
+				E10C1B5E5B62CB7364C54340,
 			);
 			buildRules = (
 			);
@@ -323,6 +376,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1406F637CA1511752BAA33B4,
+				71C694197F1E9F41EBB36BE2,
+				90EF42747B2FCDF76EBDEA2F,
 				855B780E5E44D31A3368D556,
 				A491DE99141243D96319827F,
 				4F9B90C5E0BB284D6D827CD3,
@@ -337,6 +393,14 @@
 				E73E245340B7F32D0AE15C86,
 				DD0AD4DE04D206E8B736F8EA,
 				6D79764D0B98D7A1B26E2F4A,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E10C1B5E5B62CB7364C54340 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B8F15172C55DB9A7C3FC64E,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -358,6 +422,15 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					Metal,
+					"-framework",
+					MetalKit,
 				);
 			};
 		};
@@ -397,6 +470,15 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					Metal,
+					"-framework",
+					MetalKit,
 				);
 			};
 		};

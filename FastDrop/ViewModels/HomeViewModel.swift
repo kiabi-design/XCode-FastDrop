@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Network
 import UIKit
+import MetalKit
 
 @MainActor
 final class HomeViewModel: ObservableObject {
@@ -20,6 +21,11 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var isTransferring: Bool = false
     @Published var showTransferScreen: Bool = false
     @Published var selectedItems: [OutgoingItem] = []
+
+    // Metal Renderer
+    @Published var metalRenderer: MetaballRenderer?
+    @Published var dragProgress: Float = 0
+    @Published var isDragging: Bool = false
 
     // UI
     @Published var showSettings: Bool = false
@@ -45,6 +51,24 @@ final class HomeViewModel: ObservableObject {
         setupNetworkCallbacks()
         network.receiveEnabled = receiveEnabled
         network.start()
+
+        // Initialize Metal renderer on next run loop (needs MTKView)
+        DispatchQueue.main.async { [weak self] in
+            self?.setupMetalRenderer()
+        }
+    }
+
+    private func setupMetalRenderer() {
+        // Will be set from HomeView when MTKView is available
+    }
+
+    func setMetalRenderer(_ renderer: MetaballRenderer) {
+        self.metalRenderer = renderer
+
+        // Sync existing selected items to Metal renderer
+        for item in selectedItems {
+            renderer.addDrop(fileName: item.fileName, fileSize: item.sizeBytes)
+        }
     }
 
     // MARK: - Derived
@@ -90,15 +114,26 @@ final class HomeViewModel: ObservableObject {
             .compactMap { OutgoingItem(url: $0) }
         guard !items.isEmpty else { return }
         selectedItems.append(contentsOf: items)
+
+        // Add to Metal renderer
+        for item in items {
+            metalRenderer?.addDrop(fileName: item.fileName, fileSize: item.sizeBytes)
+        }
+
         HapticManager.selection()
     }
 
     func removeSelectedItem(_ item: OutgoingItem) {
+        let index = selectedItems.firstIndex { $0.id == item.id }
         selectedItems.removeAll { $0.id == item.id }
+        if let index = index {
+            metalRenderer?.removeDrop(at: index)
+        }
     }
 
     func clearSelectedItems() {
         selectedItems.removeAll()
+        metalRenderer?.drops.removeAll()
     }
 
     // MARK: - Sending
@@ -122,6 +157,9 @@ final class HomeViewModel: ObservableObject {
 
         isTransferring = true
         showTransferScreen = true
+
+        // Start Metal renderer sending animation
+        metalRenderer?.startSending(to: host)
 
         let senderName = settings.displayName
         sendTask?.cancel()
@@ -288,6 +326,7 @@ final class HomeViewModel: ObservableObject {
         sendTask?.cancel()
         sendTask = nil
         network.cancelReceive()
+        metalRenderer?.cancelSending()
         resetTransferUI()
     }
 
@@ -304,6 +343,11 @@ final class HomeViewModel: ObservableObject {
         isTransferring = false
         showTransferScreen = false
         transferProgress = TransferProgress()
+        metalRenderer?.drops.removeAll()
+        // Re-add remaining selected items
+        for item in selectedItems {
+            metalRenderer?.addDrop(fileName: item.fileName, fileSize: item.sizeBytes)
+        }
     }
 
     func openReceivedFolder() {
