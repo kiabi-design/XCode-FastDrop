@@ -47,7 +47,6 @@ struct MetaballMetalView: UIViewRepresentable {
         // Allow the MTKView to fill the GeometryReader
         return nil
     }
-}
 
     func makeCoordinator() -> Coordinator {
         Coordinator(renderer: renderer,

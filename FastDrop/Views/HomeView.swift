@@ -33,7 +33,7 @@ struct HomeView: View {
                 }
             } else {
                 // Fallback if Metal unavailable
-                print("🏠 HomeView: Metal renderer unavailable, showing fallback")
+                let _ = print("🏠 HomeView: Metal renderer unavailable, showing fallback")
                 FDBackground()
                     .ignoresSafeArea()
             }
