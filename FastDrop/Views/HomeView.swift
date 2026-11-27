@@ -9,9 +9,9 @@ struct HomeView: View {
     @EnvironmentObject private var settings: SettingsService
 
     @State private var metalRenderer: MetaballRenderer? = {
-        print("🏠 HomeView: Creating MetaballRenderer...")
+        FLog("🏠 HomeView: Creating MetaballRenderer...")
         let renderer = MetaballRenderer.makeRenderer()
-        print("🏠 HomeView: MetaballRenderer created: \(renderer != nil)")
+        FLog("🏠 HomeView: MetaballRenderer created: \(renderer != nil)")
         return renderer
     }()
 
@@ -33,7 +33,7 @@ struct HomeView: View {
                 }
             } else {
                 // Fallback if Metal unavailable
-                let _ = print("🏠 HomeView: Metal renderer unavailable, showing fallback")
+                let _ = FLog("🏠 HomeView: Metal renderer unavailable, showing fallback")
                 FDBackground()
                     .ignoresSafeArea()
             }

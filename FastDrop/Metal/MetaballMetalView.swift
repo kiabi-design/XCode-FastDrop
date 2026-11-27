@@ -82,7 +82,7 @@ struct MetaballMetalView: UIViewRepresentable {
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-            print("📐 MetaballMetalView: drawableSizeWillChange \(size)")
+            FLog("📐 MetaballMetalView: drawableSizeWillChange \(size)")
         }
 
         func draw(in view: MTKView) {
@@ -91,7 +91,7 @@ struct MetaballMetalView: UIViewRepresentable {
                   let commandBuffer = renderer.commandQueue.makeCommandBuffer(),
                   let drawable = view.currentDrawable,
                   let descriptor = view.currentRenderPassDescriptor else {
-                print("⚠️ MetaballMetalView: draw skipped - drawableSize=\(view.drawableSize) drawable=\(view.currentDrawable != nil) descriptor=\(view.currentRenderPassDescriptor != nil)")
+                FLog("⚠️ MetaballMetalView: draw skipped - drawableSize=\(view.drawableSize) drawable=\(view.currentDrawable != nil) descriptor=\(view.currentRenderPassDescriptor != nil)")
                 return
             }
 
@@ -114,7 +114,7 @@ struct MetaballMetalView: UIViewRepresentable {
             commandBuffer.commit()
 
             if Int(CACurrentMediaTime() * 10) % 60 == 0 {
-                print("🎨 MetaballMetalView: frame rendered size=\(view.drawableSize)")
+                FLog("🎨 MetaballMetalView: frame rendered size=\(view.drawableSize)")
             }
         }
 

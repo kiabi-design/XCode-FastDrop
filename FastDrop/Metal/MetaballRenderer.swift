@@ -5,6 +5,46 @@ import simd
 import SwiftUI
 
 // ──────────────────────────────────────────────────────────────
+// FILE LOGGER (readable via Files.app / LiveContainer)
+// ──────────────────────────────────────────────────────────────
+
+final class FileLogger {
+    static let shared = FileLogger()
+    private let url: URL
+    private let queue = DispatchQueue(label: "fastdrop.logger")
+
+    private init() {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let logDir = docs.appendingPathComponent("Logs", isDirectory: true)
+        try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+        url = logDir.appendingPathComponent("fastdrop.log")
+        write("=== FastDrop Log Started ===")
+    }
+
+    func write(_ message: String) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(timestamp)] \(message)\n"
+        queue.async {
+            if let data = line.data(using: .utf8) {
+                if FileManager.default.fileExists(atPath: self.url.path) {
+                    if let handle = try? FileHandle(forWritingTo: self.url) {
+                        handle.seekToEndOfFile()
+                        handle.write(data)
+                        handle.closeFile()
+                    }
+                } else {
+                    try? data.write(to: self.url)
+                }
+            }
+        }
+        print(message) // Also to console for Xcode users
+    }
+}
+
+// Convenience
+func FLog(_ message: String) { FileLogger.shared.write(message) }
+
+// ──────────────────────────────────────────────────────────────
 // DATA MODELS (match Metal structs exactly)
 // ──────────────────────────────────────────────────────────────
 
@@ -222,25 +262,25 @@ final class MetaballRenderer: ObservableObject {
     }
 
     private func commonInit() {
-        print("🔧 MetaballRenderer: commonInit started")
+        FLog("🔧 MetaballRenderer: commonInit started")
         setupPipelines()
-        print("🔧 MetaballRenderer: pipelines created")
+        FLog("🔧 MetaballRenderer: pipelines created")
         setupBuffers()
-        print("🔧 MetaballRenderer: buffers created")
+        FLog("🔧 MetaballRenderer: buffers created")
         setupTextures()
-        print("🔧 MetaballRenderer: textures created")
+        FLog("🔧 MetaballRenderer: textures created")
         setupGeometry()
-        print("🔧 MetaballRenderer: geometry created")
+        FLog("🔧 MetaballRenderer: geometry created")
         startAnimationLoop()
-        print("🔧 MetaballRenderer: animation loop started")
+        FLog("🔧 MetaballRenderer: animation loop started")
 
         // Start with 3 drops like concept
         for _ in 0..<3 { addDrop() }
-        print("🔧 MetaballRenderer: 3 drops added, count=\(drops.count)")
+        FLog("🔧 MetaballRenderer: 3 drops added, count=\(drops.count)")
 
         // Force initial uniform update so first frame has data
         updateUniforms(time: 0)
-        print("🔧 MetaballRenderer: initial uniforms updated")
+        FLog("🔧 MetaballRenderer: initial uniforms updated")
     }
 
     deinit {
@@ -409,7 +449,7 @@ final class MetaballRenderer: ObservableObject {
         updateUniforms(time: Float(currentTime))
 
         if Int(currentTime * 10) % 60 == 0 {
-            print("🎬 MetaballRenderer: frameCallback dt=\(dt) drops=\(drops.count) sendScene=\(sendSceneActive)")
+            FLog("🎬 MetaballRenderer: frameCallback dt=\(dt) drops=\(drops.count) sendScene=\(sendSceneActive)")
         }
     }
 

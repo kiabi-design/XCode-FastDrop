@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 APP = "FastDrop"
 BUNDLE_ID = "com.fastdrop"
-VERSION = "1.2"
+VERSION = "1.3"
 BUILD = "1"
 DEPLOYMENT_TARGET = "17.0"
 
