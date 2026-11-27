@@ -97,14 +97,18 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - File selection
 
+    @Published var showDocumentPicker: Bool = false
+
     func pickFiles() {
-        showFilePicker = true
+        showDocumentPicker = true
     }
 
-    func handleImport(_ result: Result<[URL], Error>) {
-        if case .success(let urls) = result {
-            addFiles(urls)
-        }
+    func handleDocumentPick(_ urls: [URL]) {
+        addFiles(urls)
+    }
+
+    func handleDocumentPickerCancel() {
+        // No action needed
     }
 
     func addFiles(_ urls: [URL]) {

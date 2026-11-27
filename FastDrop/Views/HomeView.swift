@@ -2,6 +2,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 import MetalKit
 
+// Import the DocumentPicker
+// (already in same module, no import needed)
+
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @EnvironmentObject private var settings: SettingsService
@@ -52,6 +55,14 @@ struct HomeView: View {
                             Image(systemName: "clock.arrow.circlepath")
                         }
                         .accessibilityLabel("История")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            viewModel.pickFiles()
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("Добавить файлы")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
@@ -111,12 +122,18 @@ struct HomeView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.showTransferScreen)
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.showStatusCard)
-        .fileImporter(
-            isPresented: $viewModel.showFilePicker,
-            allowedContentTypes: [.item],
-            allowsMultipleSelection: true
-        ) { result in
-            viewModel.handleImport(result)
+        .sheet(isPresented: $viewModel.showDocumentPicker) {
+            DocumentPicker(
+                allowedContentTypes: [.item, .folder, .fileURL, .data],
+                allowsMultipleSelection: true,
+                onPick: { urls in
+                    viewModel.handleDocumentPick(urls)
+                },
+                onCancel: {
+                    viewModel.handleDocumentPickerCancel()
+                }
+            )
+            .ignoresSafeArea()
         }
         .sheet(isPresented: $viewModel.showSettings) {
             SettingsView()
